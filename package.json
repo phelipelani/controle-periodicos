@@ -1,0 +1,16 @@
+{
+  "name": "controle-periodicos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Controle de servicos periodicos dos condominios (dedetizacao, extintor, reservatorio, AVCB, seguro)",
+  "scripts": {
+    "install:all": "npm install && npm --prefix server install && npm --prefix web install",
+    "dev": "concurrently -n server,web -c blue,magenta \"npm --prefix server run dev\" \"npm --prefix web run dev\"",
+    "build": "npm --prefix web run build",
+    "start": "npm --prefix server start",
+    "prod": "npm run build && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

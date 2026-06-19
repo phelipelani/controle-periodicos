@@ -1,0 +1,118 @@
+:root {
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --texto: #0f172a;
+  --muted: #64748b;
+  --borda: #e2e8f0;
+  --primaria: #2563eb;
+  --primaria-escura: #1d4ed8;
+  --vencido: #dc2626;
+  --vencido-bg: #fee2e2;
+  --avencer: #d97706;
+  --avencer-bg: #fef3c7;
+  --emdia: #16a34a;
+  --emdia-bg: #dcfce7;
+  --sem: #64748b;
+  --sem-bg: #e2e8f0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--texto);
+}
+
+a { color: var(--primaria); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.centro { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: var(--muted); }
+
+/* Layout */
+.app { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 230px;
+  background: #0f172a;
+  color: #cbd5e1;
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sidebar .marca { color: #fff; font-weight: 700; font-size: 17px; margin-bottom: 18px; line-height: 1.2; }
+.sidebar .marca small { display: block; font-weight: 400; color: #94a3b8; font-size: 12px; }
+.sidebar a { color: #cbd5e1; padding: 9px 12px; border-radius: 8px; display: block; }
+.sidebar a:hover { background: #1e293b; text-decoration: none; }
+.sidebar a.ativo { background: var(--primaria); color: #fff; }
+.sidebar .rodape { margin-top: auto; font-size: 13px; color: #94a3b8; }
+.sidebar .rodape button { margin-top: 8px; }
+
+.conteudo { flex: 1; padding: 28px 32px; max-width: 1100px; }
+.conteudo h1 { margin: 0 0 4px; font-size: 24px; }
+.conteudo .sub { color: var(--muted); margin: 0 0 22px; }
+
+/* Cards */
+.card { background: var(--card); border: 1px solid var(--borda); border-radius: 12px; padding: 18px; }
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 26px; }
+.card-num { text-align: center; }
+.card-num .n { font-size: 32px; font-weight: 700; }
+.card-num .rotulo { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+/* Tabelas */
+table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid var(--borda); }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--borda); font-size: 14px; }
+th { background: #f8fafc; color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8fafc; }
+
+/* Badges */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge.vencido { background: var(--vencido-bg); color: var(--vencido); }
+.badge.a_vencer { background: var(--avencer-bg); color: var(--avencer); }
+.badge.em_dia { background: var(--emdia-bg); color: var(--emdia); }
+.badge.sem_registro { background: var(--sem-bg); color: var(--sem); }
+
+/* Botões e forms */
+button, .btn {
+  background: var(--primaria); color: #fff; border: none; border-radius: 8px;
+  padding: 9px 16px; font-size: 14px; cursor: pointer; font-weight: 600;
+}
+button:hover, .btn:hover { background: var(--primaria-escura); }
+button.secundario { background: #e2e8f0; color: var(--texto); }
+button.secundario:hover { background: #cbd5e1; }
+button.perigo { background: var(--vencido); }
+button:disabled { opacity: .6; cursor: not-allowed; }
+
+input, select, textarea {
+  width: 100%; padding: 9px 11px; border: 1px solid var(--borda);
+  border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff;
+}
+label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+.campo { margin-bottom: 14px; }
+.linha { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.linha .campo { flex: 1; margin-bottom: 0; min-width: 140px; }
+
+.barra-topo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 12px; flex-wrap: wrap; }
+
+/* Linha destacada (agendamento de hoje) */
+tr.hoje td { background: var(--avencer-bg) !important; }
+tr.hoje td:first-child { box-shadow: inset 3px 0 0 var(--avencer); }
+.tag-hoje { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--avencer); color: #fff; vertical-align: middle; }
+.aviso { background: var(--avencer-bg); color: var(--avencer); padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 14px; }
+
+.erro { background: var(--vencido-bg); color: var(--vencido); padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 14px; }
+.vazio { color: var(--muted); padding: 24px; text-align: center; }
+
+/* Login */
+.login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.login-card { width: 100%; max-width: 360px; }
+.login-card h1 { font-size: 22px; margin: 0 0 4px; }
+.login-card .sub { color: var(--muted); margin: 0 0 20px; }
+
+/* Modal simples */
+.overlay { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+.modal { width: 100%; max-width: 440px; }
+.modal h2 { margin: 0 0 16px; font-size: 18px; }
+.modal-acoes { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
