@@ -74,7 +74,7 @@ Observações para o servidor:
 No **primeiro boot**, o servidor cria um usuário administrador e imprime no console:
 
 ```
-==> Usuário admin criado: admin@local / senha: XXXXXXXX
+==> Usuário admin criado: admin@local / senha: admin123
 ```
 
 Use essas credenciais para entrar, depois cadastre os gerentes e troque a senha.
