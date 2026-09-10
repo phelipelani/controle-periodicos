@@ -64,3 +64,12 @@ export const IcoSeta = () => (
 export const IcoSino = () => (
   <svg {...base}><path d="M6 9a6 6 0 1 1 12 0c0 4.5 2 5.5 2 5.5H4S6 13.5 6 9Z" /><path d="M10 19.5a2 2 0 0 0 4 0" /></svg>
 );
+export const IcoEye = () => (
+  <svg {...base}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+);
+export const IcoEdit = () => (
+  <svg {...base}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+);
+export const IcoDots = () => (
+  <svg {...base}><circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" /></svg>
+);

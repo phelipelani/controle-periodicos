@@ -7,6 +7,8 @@ import Condominios from './pages/Condominios';
 import CondominioDetalhe from './pages/CondominioDetalhe';
 import Servicos from './pages/Servicos';
 import ServicoPagina from './pages/ServicoPagina';
+import Seguros from './pages/Seguros';
+import Dedetizacao from './pages/Dedetizacao';
 import Agendamentos from './pages/Agendamentos';
 import Usuarios from './pages/Usuarios';
 import ConfigServicos from './pages/ConfigServicos';
@@ -26,6 +28,8 @@ export default function App() {
         <Route path="/condominios" element={<Condominios />} />
         <Route path="/condominios/:id" element={<CondominioDetalhe />} />
         <Route path="/servicos" element={<Servicos />} />
+        <Route path="/servicos/seguro" element={<Seguros />} />
+        <Route path="/servicos/dedetizacao" element={<Dedetizacao />} />
         <Route path="/servicos/:chave" element={<ServicoPagina />} />
         <Route path="/agendamentos" element={<Agendamentos />} />
         <Route

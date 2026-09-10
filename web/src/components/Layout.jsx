@@ -9,7 +9,7 @@ const ITENS = [
   { to: '/', fim: true, rotulo: 'Painel', Icone: IcoPainel },
   { to: '/condominios', rotulo: 'Condomínios', Icone: IcoCondominio },
   { to: '/servicos', fim: true, rotulo: 'Serviços', Icone: IcoServicos },
-  { to: '/agendamentos', rotulo: 'Dedetização', Icone: IcoDedetizacao },
+  { to: '/servicos/dedetizacao', rotulo: 'Dedetização', Icone: IcoDedetizacao },
   { to: '/servicos/extintor', rotulo: 'Extintores', Icone: IcoExtintor },
   { to: '/servicos/reservatorio', rotulo: 'Reservatórios', Icone: IcoReservatorio },
   { to: '/servicos/seguro', rotulo: 'Seguros', Icone: IcoSeguro },

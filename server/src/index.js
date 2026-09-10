@@ -18,6 +18,7 @@ const servicosRoutes = require('./routes/servicos');
 const agendamentosRoutes = require('./routes/agendamentos');
 const dashboardRoutes = require('./routes/dashboard');
 const historicoRoutes = require('./routes/historico');
+const uploadRoutes = require('./routes/upload');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -45,6 +46,7 @@ app.use('/api/servicos', servicosRoutes);
 app.use('/api/agendamentos', agendamentosRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/historico', historicoRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // --- Servir o frontend já compilado (web/dist), se existir ---
 // Em produção (no PC servidor) um único processo serve o site + a API na mesma
