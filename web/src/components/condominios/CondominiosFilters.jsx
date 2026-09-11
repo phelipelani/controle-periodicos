@@ -34,6 +34,16 @@ export default function CondominiosFilters({ filtros, setFiltros, gerentes }) {
             ))}
           </select>
         </div>
+        {(filtros.busca || filtros.status !== 'Todos' || filtros.gerente !== 'Todos') && (
+          <button 
+            type="button" 
+            className="cond-btn-clear" 
+            onClick={() => setFiltros({ busca: '', status: 'Todos', gerente: 'Todos' })}
+            title="Limpar todos os filtros"
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
 
       <div className="cond-mobile-filters">

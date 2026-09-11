@@ -149,18 +149,18 @@ export default function Condominios() {
         </div>
       )}
 
-      <div className="barra-topo" style={{ marginBottom: 0 }}>
+      <div className="cond-header">
         <div>
           <h1>Condomínios</h1>
-          <p className="sub" style={{ margin: 0 }}>Gerencie todos os condomínios e acompanhe a situação dos serviços.</p>
+          <p>Gerencie todos os condomínios e acompanhe a situação dos serviços.</p>
         </div>
-        {isAdmin && <button onClick={() => setEditando({})}>+ Novo condomínio</button>}
+        {isAdmin && <button className="cond-btn-novo" onClick={() => setEditando({})}>+ Novo condomínio</button>}
       </div>
 
       {erro && <div className="erro">{erro}</div>}
 
       {carregando ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Carregando painel de condomínios...</div>
+        <div style={{ padding: '40px', textAlign: 'center', color: '#8292A8' }}>Carregando painel de condomínios...</div>
       ) : (
         <>
           <CondominiosKpis stats={stats} filtroStatus={filtros.status} onFilterStatus={(s) => setFiltros(f => ({ ...f, status: f.status === s ? 'Todos' : s }))} />
@@ -170,11 +170,11 @@ export default function Condominios() {
           )}
 
           {dadosFiltrados.length === 0 ? (
-            <div className="card vazio" style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: '12px' }}>
+            <div className="cond-card-vazio">
               <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏢</div>
-              <h3 style={{ color: '#0f172a', margin: '0 0 8px 0' }}>Nenhum condomínio encontrado.</h3>
-              <p style={{ color: '#64748b', margin: 0 }}>Cadastre seu primeiro condomínio para começar a acompanhar os serviços.</p>
-              {isAdmin && <button style={{ marginTop: '24px' }} onClick={() => setEditando({})}>+ Novo condomínio</button>}
+              <h3>Nenhum condomínio encontrado.</h3>
+              <p>Cadastre seu primeiro condomínio para começar a acompanhar os serviços.</p>
+              {isAdmin && <button className="cond-btn-novo" style={{ marginTop: '24px' }} onClick={() => setEditando({})}>+ Novo condomínio</button>}
             </div>
           ) : (
             <div className="cond-grid">

@@ -68,10 +68,15 @@ export default function CondominioCard({ condominio, onEdit }) {
             <div className="cond-card-img-placeholder">🏢</div>
           )}
           <div className="cond-card-info">
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '2px', fontFamily: 'monospace' }}>{codigoStr}</div>
-            <h3>{condominio.nome}</h3>
-            <p>📍 {condominio.endereco || 'Endereço não informado'}</p>
-            <p>👤 {condominio.gerente_nome || 'Sem gerente'} <span style={{ background: '#f1f5f9', color: '#475569', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600 }}>Gerente</span></p>
+            <div className="cond-card-code">{codigoStr}</div>
+            <h3 className="cond-card-name">{condominio.nome}</h3>
+            <p className="cond-card-address">
+              <span className="cond-loc-ico">📍</span> {condominio.endereco || 'Endereço não informado'}
+            </p>
+            <p className="cond-card-gerente">
+              <span className="cond-mgr-ico">👤</span> {condominio.gerente_nome || 'Sem gerente'} 
+              <span className="cond-badge-gerente">Gerente</span>
+            </p>
           </div>
         </div>
         <div className="cond-card-actions">
@@ -102,12 +107,14 @@ export default function CondominioCard({ condominio, onEdit }) {
 
       <div className="cond-card-footer">
         <div className="cond-last-update">
-          <IcoRelogio /> 
-          Última atualização<br/>
-          {lastUpdate ? lastUpdate.split('-').reverse().join('/') : '—'}
+          <span className="cond-clock-ico"><IcoRelogio /></span>
+          <div>
+            <span className="cond-update-label">Última atualização</span>
+            <span className="cond-update-date">{lastUpdate ? lastUpdate.split('-').reverse().join('/') : '—'}</span>
+          </div>
         </div>
         <button className="cond-btn-acessar" onClick={(e) => { e.stopPropagation(); navigate(`/condominios/${condominio.id}`); }}>
-          Acessar <span style={{ marginLeft: '4px' }}>&rsaquo;</span>
+          Acessar <span className="cond-arrow-ico">&rsaquo;</span>
         </button>
       </div>
     </div>
