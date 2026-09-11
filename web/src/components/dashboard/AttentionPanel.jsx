@@ -3,7 +3,7 @@ import { formatarData } from '../format';
 
 const IcoEye = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
 
-export default function AttentionPanel({ servicos }) {
+export default function AttentionPanel({ servicos = [] }) {
   const atencao = useMemo(() => {
     const pendentes = servicos.filter(s => s.statusCalc === 'vencido' || s.statusCalc === 'a_vencer');
     
@@ -15,7 +15,9 @@ export default function AttentionPanel({ servicos }) {
       if (a.statusCalc !== 'vencido' && b.statusCalc === 'vencido') return 1;
       
       // Se ambos são mesmo status, ordena pela data (crescente)
-      return a.dataValidade.localeCompare(b.dataValidade);
+      const dataA = a.dataValidade || '9999-12-31';
+      const dataB = b.dataValidade || '9999-12-31';
+      return dataA.localeCompare(dataB);
     });
     
     return pendentes.slice(0, 10); // Mostrar top 10

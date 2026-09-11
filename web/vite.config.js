@@ -6,9 +6,15 @@ export default defineConfig({
   // Imagens (logo/background) ficam na pasta public/ da raiz do projeto.
   publicDir: '../public',
   server: {
+    host: true,
     port: 5173,
+    allowedHosts: true,
     proxy: {
-      '/api': 'http://localhost:4000',
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 });

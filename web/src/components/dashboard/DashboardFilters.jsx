@@ -1,6 +1,15 @@
 import React from 'react';
 
-export default function DashboardFilters({ filtros, setFiltros, condominios }) {
+export default function DashboardFilters({ filtros, setFiltros, condominios = [], tiposServico = [], onRefresh, carregando }) {
+  const listaServicos = tiposServico.length > 0 ? tiposServico : [
+    { id: 'seguro', chave: 'seguro', nome: 'Seguros' },
+    { id: 'extintor', chave: 'extintor', nome: 'Extintores' },
+    { id: 'dedetizacao', chave: 'dedetizacao', nome: 'Dedetização' },
+    { id: 'reservatorio', chave: 'reservatorio', nome: 'Reservatórios' },
+    { id: 'avcb', chave: 'avcb', nome: 'AVCB' },
+    { id: 'spda', chave: 'spda', nome: 'SPDA' }
+  ];
+
   return (
     <div className="dash-filters">
       <div className="dash-filter-group" style={{ flex: 1.5 }}>
@@ -10,9 +19,9 @@ export default function DashboardFilters({ filtros, setFiltros, condominios }) {
           value={filtros.condominioId}
           onChange={e => setFiltros({...filtros, condominioId: e.target.value})}
         >
-          <option value="todos">Todos os condomínios</option>
+          <option value="todos">Todos os condomínios ({condominios.length})</option>
           {condominios.map(c => (
-            <option key={c.id} value={c.id}>{c.nome}</option>
+            <option key={c.id} value={String(c.id)}>{c.codigo ? `${c.codigo} - ` : ''}{c.nome}</option>
           ))}
         </select>
       </div>
@@ -25,11 +34,9 @@ export default function DashboardFilters({ filtros, setFiltros, condominios }) {
           onChange={e => setFiltros({...filtros, servicoId: e.target.value})}
         >
           <option value="todos">Todos os serviços</option>
-          <option value="seguro">Seguros</option>
-          <option value="extintores">Extintores</option>
-          <option value="dedetizacao">Dedetização</option>
-          <option value="reservatorios">Reservatórios</option>
-          <option value="avcb">AVCB</option>
+          {listaServicos.map(s => (
+            <option key={s.chave || s.id} value={s.chave || s.id}>{s.nome}</option>
+          ))}
         </select>
       </div>
 
@@ -48,9 +55,27 @@ export default function DashboardFilters({ filtros, setFiltros, condominios }) {
         </select>
       </div>
 
-      <button className="dash-btn-update">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l5.67-5.67"/></svg>
-        Atualizar dados
+      <button 
+        type="button" 
+        className="dash-btn-update" 
+        onClick={onRefresh}
+        disabled={carregando}
+        style={{ cursor: carregando ? 'wait' : 'pointer', opacity: carregando ? 0.7 : 1 }}
+      >
+        <svg 
+          width="16" 
+          height="16" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          strokeWidth="2" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+          style={{ animation: carregando ? 'spin 1s linear infinite' : 'none' }}
+        >
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l5.67-5.67"/>
+        </svg>
+        {carregando ? 'Atualizando...' : 'Atualizar dados'}
       </button>
     </div>
   );

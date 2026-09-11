@@ -34,8 +34,8 @@ export default function ServiceStatusChart({ stats }) {
             </PieChart>
           </ResponsiveContainer>
           <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-            <div style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a' }}>{stats.totalCondominios}</div>
-            <div style={{ fontSize: '11px', color: '#64748b' }}>Condomínios</div>
+            <div className="dash-donut-val" style={{ fontSize: '24px', fontWeight: 700 }}>{stats.totalCondominios}</div>
+            <div className="dash-donut-lbl" style={{ fontSize: '11px', color: '#94a3b8' }}>Condomínios</div>
           </div>
         </div>
         <div className="dash-legend">

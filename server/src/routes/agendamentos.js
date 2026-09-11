@@ -39,12 +39,13 @@ router.post('/', (req, res) => {
     const ded = db.prepare("SELECT id FROM servicos WHERE chave = 'dedetizacao'").get();
     servico_id = ded?.id;
   }
+  const empresaNorm = empresa ? String(empresa).trim().toUpperCase() : null;
   const info = db
     .prepare(`
       INSERT INTO agendamentos (condominio_id, servico_id, data_agendada, periodo, empresa, observacao, criado_por)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `)
-    .run(condominio_id, servico_id, data_agendada, periodo || null, empresa || null, observacao || null, req.usuario.id);
+    .run(condominio_id, servico_id, data_agendada, periodo || null, empresaNorm, observacao || null, req.usuario.id);
 
   // Se a data já chegou, promove na hora.
   promoteAgendamentos();
@@ -66,16 +67,29 @@ router.put('/:id', (req, res) => {
   if (status === 'cancelado') {
     db.prepare("UPDATE agendamentos SET status = 'cancelado' WHERE id = ?").run(id);
   } else {
+    const empresaNorm = empresa === undefined ? ag.empresa : (empresa ? String(empresa).trim().toUpperCase() : null);
     db.prepare('UPDATE agendamentos SET data_agendada = ?, periodo = ?, empresa = ?, observacao = ? WHERE id = ?').run(
       data_agendada ?? ag.data_agendada,
       periodo === undefined ? ag.periodo : (periodo || null),
-      empresa === undefined ? ag.empresa : empresa,
+      empresaNorm,
       observacao === undefined ? ag.observacao : observacao,
       id
     );
     promoteAgendamentos();
   }
   res.json(db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(id));
+});
+
+// Cancelar / Excluir agendamento
+router.delete('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const ag = db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(id);
+  if (!ag) return res.status(404).json({ erro: 'Agendamento não encontrado' });
+  if (!podeAcessarCondominio(req.usuario, ag.condominio_id)) {
+    return res.status(403).json({ erro: 'Você não tem acesso a este condomínio' });
+  }
+  db.prepare('DELETE FROM agendamentos WHERE id = ?').run(id);
+  res.json({ ok: true, mensagem: 'Agendamento cancelado com sucesso' });
 });
 
 module.exports = router;

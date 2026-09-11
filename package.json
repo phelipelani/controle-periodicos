@@ -8,7 +8,10 @@
     "dev": "concurrently -n server,web -c blue,magenta \"npm --prefix server run dev\" \"npm --prefix web run dev\"",
     "build": "npm --prefix web run build",
     "start": "npm --prefix server start",
-    "prod": "npm run build && npm start"
+    "prod": "npm run build && npm start",
+    "tunnel": "ngrok http 5173",
+    "tunnel:prod": "ngrok http 4000",
+    "dev:tunnel": "concurrently -n server,web,ngrok -c blue,magenta,green \"npm --prefix server run dev\" \"npm --prefix web run dev\" \"ngrok http 5173\""
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

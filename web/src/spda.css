@@ -1,0 +1,852 @@
+/* ============================================================
+   SPDA MODULE STYLES (iMCOSTA)
+   Theme Color: Purple / Violet (#7C3AED / #8B5CF6)
+   ============================================================ */
+
+:root {
+  --spda-primary: #7c3aed;
+  --spda-primary-hover: #6d28d9;
+  --spda-primary-light: #f5f3ff;
+  --spda-primary-border: #ddd6fe;
+  --spda-primary-text: #6d28d9;
+
+  --spda-bg: #f3f6fa;
+  --spda-card-bg: #ffffff;
+  --spda-border: #e2e8f0;
+  --spda-text-main: #0f172a;
+  --spda-text-muted: #64748b;
+
+  --spda-success-bg: #ecfdf5;
+  --spda-success-text: #059669;
+  --spda-success-border: #a7f3d0;
+
+  --spda-warning-bg: #fffbeb;
+  --spda-warning-text: #d97706;
+  --spda-warning-border: #fde68a;
+
+  --spda-danger-bg: #fef2f2;
+  --spda-danger-text: #dc2626;
+  --spda-danger-border: #fecaca;
+
+  --spda-neutral-bg: #f1f5f9;
+  --spda-neutral-text: #475569;
+  --spda-neutral-border: #cbd5e1;
+}
+
+/* Container Principal */
+.spda-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 4px 40px 4px;
+  transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.spda-layout.drawer-open {
+  margin-right: 560px;
+}
+
+/* Header */
+.spda-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+.spda-title-area {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.spda-title-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--spda-primary-light);
+  color: var(--spda-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  border: 1px solid var(--spda-primary-border);
+}
+
+.spda-title-area h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--spda-text-main);
+  margin: 0 0 3px 0;
+  letter-spacing: -0.02em;
+}
+
+.spda-title-area p {
+  font-size: 13.5px;
+  color: var(--spda-text-muted);
+  margin: 0;
+}
+
+.spda-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--spda-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
+  transition: all 0.2s ease;
+}
+
+.spda-btn-primary:hover {
+  background: var(--spda-primary-hover);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+  transform: translateY(-1px);
+}
+
+/* KPIs Grid */
+.spda-kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.spda-kpi-card {
+  background: var(--spda-card-bg);
+  border: 1px solid var(--spda-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.spda-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  border-color: #cbd5e1;
+}
+
+.spda-kpi-card.active {
+  border-color: var(--spda-primary);
+  box-shadow: 0 0 0 2px var(--spda-primary-border), 0 4px 12px rgba(124, 58, 237, 0.12);
+  background: #faf8ff;
+}
+
+.spda-kpi-icon-wrap {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.spda-kpi-card.total .spda-kpi-icon-wrap {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.spda-kpi-card.em_dia .spda-kpi-icon-wrap {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.spda-kpi-card.a_vencer .spda-kpi-icon-wrap {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.spda-kpi-card.vencidos .spda-kpi-icon-wrap {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.spda-kpi-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.spda-kpi-value {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--spda-text-main);
+  letter-spacing: -0.03em;
+}
+
+.spda-kpi-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--spda-text-main);
+  margin-top: 2px;
+}
+
+.spda-kpi-sub {
+  font-size: 11.5px;
+  color: var(--spda-text-muted);
+  margin-top: 1px;
+}
+
+/* Filtros */
+.spda-filters-card {
+  background: var(--spda-card-bg);
+  border: 1px solid var(--spda-border);
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.spda-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 170px;
+}
+
+.spda-filter-group.busca {
+  flex: 2;
+  min-width: 240px;
+}
+
+.spda-filter-group.datas {
+  flex: 2;
+  min-width: 280px;
+}
+
+.spda-filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: none;
+}
+
+.spda-input,
+.spda-select {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--spda-text-main);
+  background: #ffffff;
+  outline: none;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.spda-input:focus,
+.spda-select:focus {
+  border-color: var(--spda-primary);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.spda-date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spda-date-range span {
+  font-size: 12px;
+  color: var(--spda-text-muted);
+}
+
+.spda-btn-clear {
+  height: 38px;
+  padding: 0 16px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.spda-btn-clear:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+/* Tabela */
+.spda-table-card {
+  background: var(--spda-card-bg);
+  border: 1px solid var(--spda-border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.spda-table-header-bar {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--spda-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+}
+
+.spda-table-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--spda-text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spda-table-count {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--spda-text-muted);
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.spda-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.spda-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13.5px;
+}
+
+.spda-table th {
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--spda-border);
+  white-space: nowrap;
+}
+
+.spda-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.spda-table th.sortable:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.spda-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.spda-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.spda-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.spda-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Badges de Situação */
+.spda-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.spda-badge.em_dia {
+  background: var(--spda-success-bg);
+  color: var(--spda-success-text);
+  border: 1px solid var(--spda-success-border);
+}
+
+.spda-badge.a_vencer {
+  background: var(--spda-warning-bg);
+  color: var(--spda-warning-text);
+  border: 1px solid var(--spda-warning-border);
+}
+
+.spda-badge.vencido {
+  background: var(--spda-danger-bg);
+  color: var(--spda-danger-text);
+  border: 1px solid var(--spda-danger-border);
+}
+
+.spda-badge.sem_registro {
+  background: var(--spda-neutral-bg);
+  color: var(--spda-neutral-text);
+  border: 1px solid var(--spda-neutral-border);
+}
+
+/* Ações */
+.spda-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spda-btn-action {
+  background: transparent;
+  border: none;
+  color: var(--spda-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.spda-btn-action:hover {
+  background: var(--spda-primary-light);
+  color: var(--spda-primary-hover);
+}
+
+.spda-btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.spda-btn-icon:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+
+/* Dropdown */
+.spda-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.spda-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: #ffffff;
+  border: 1px solid var(--spda-border);
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  min-width: 160px;
+  z-index: 1000;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.spda-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.spda-dropdown-item:hover {
+  background: #f1f5f9;
+  color: var(--spda-text-main);
+}
+
+.spda-dropdown-item.danger {
+  color: #dc2626;
+}
+
+.spda-dropdown-item.danger:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* Paginação */
+.spda-pagination-bar {
+  padding: 14px 20px;
+  border-top: 1px solid var(--spda-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: #ffffff;
+  font-size: 13px;
+  color: var(--spda-text-muted);
+}
+
+.spda-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spda-page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.spda-page-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.spda-page-btn.active {
+  background: var(--spda-primary);
+  color: #ffffff;
+  border-color: var(--spda-primary);
+}
+
+.spda-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Drawer Lateral (Novo/Editar e Ficha) */
+.spda-drawer-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 9998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.spda-drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.spda-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 560px;
+  max-width: 90vw;
+  height: 100vh;
+  background: #ffffff;
+  box-shadow: -6px 0 25px rgba(0, 0, 0, 0.12);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.spda-drawer.open {
+  transform: translateX(0);
+}
+
+.spda-drawer.large {
+  width: 720px;
+}
+
+.spda-drawer-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--spda-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+}
+
+.spda-drawer-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--spda-text-main);
+  margin: 0;
+}
+
+.spda-drawer-header p {
+  font-size: 12.5px;
+  color: var(--spda-text-muted);
+  margin: 2px 0 0 0;
+}
+
+.spda-drawer-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: none;
+  color: #64748b;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.spda-drawer-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.spda-drawer-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--spda-border);
+  background: #f8fafc;
+  padding: 0 16px;
+  overflow-x: auto;
+}
+
+.spda-drawer-tab {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.spda-drawer-tab:hover {
+  color: var(--spda-text-main);
+}
+
+.spda-drawer-tab.active {
+  color: var(--spda-primary);
+  border-bottom-color: var(--spda-primary);
+  background: #ffffff;
+}
+
+.spda-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.spda-drawer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.spda-drawer-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 6px;
+}
+
+.spda-drawer-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--spda-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #ffffff;
+}
+
+.spda-btn-cancel {
+  padding: 10px 18px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.spda-btn-cancel:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Upload Area */
+.spda-upload-box {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.spda-upload-box:hover {
+  border-color: var(--spda-primary);
+  background: #faf8ff;
+}
+
+/* Toast */
+.spda-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 13.5px;
+  font-weight: 600;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideUp 0.25s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
+  .spda-layout.drawer-open {
+    margin-right: 0;
+  }
+  .spda-kpis-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .spda-kpis-grid {
+    grid-template-columns: 1fr;
+  }
+  .spda-drawer {
+    width: 100vw;
+    max-width: 100vw;
+  }
+  .spda-filter-group {
+    min-width: 100%;
+  }
+}
+
+
+/* Barra de progresso do KPI */
+.spda-kpi-card {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.spda-kpi-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.08) !important;
+}
+
+.spda-kpi-card.active {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25), 0 8px 20px -4px rgba(37, 99, 235, 0.15) !important;
+  transform: translateY(-2px) !important;
+}
+
+.spda-kpi-card.active.em_dia {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25), 0 8px 20px -4px rgba(16, 185, 129, 0.15) !important;
+}
+
+.spda-kpi-card.active.a_vencer {
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25), 0 8px 20px -4px rgba(245, 158, 11, 0.15) !important;
+}
+
+.spda-kpi-card.active.vencidos {
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.25), 0 8px 20px -4px rgba(220, 38, 38, 0.15) !important;
+}
+
+.spda-kpi-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}

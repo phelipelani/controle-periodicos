@@ -9,7 +9,10 @@ export function setToken(t) {
 }
 
 async function request(method, url, body) {
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = {
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true'
+  };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -35,4 +38,5 @@ export const api = {
   post: (url, body) => request('POST', url, body),
   put: (url, body) => request('PUT', url, body),
   del: (url) => request('DELETE', url),
+  delete: (url) => request('DELETE', url),
 };

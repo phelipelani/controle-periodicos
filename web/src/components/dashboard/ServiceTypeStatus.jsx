@@ -1,11 +1,20 @@
 import React, { useMemo } from 'react';
-import { tiposServico } from './mockData';
-import { IcoSeguro, IcoCondominio, IcoCheck, IcoVencido, IcoDoc } from '../icons'; // reuse icons for mockup
+import { IcoSeguro, IcoCondominio, IcoCheck, IcoVencido, IcoDoc, IcoSpda } from '../icons';
 
-export default function ServiceTypeStatus({ servicos }) {
+export default function ServiceTypeStatus({ servicos = [], tiposServico = [] }) {
   const tableData = useMemo(() => {
-    return tiposServico.map(tipo => {
-      const srvs = servicos.filter(s => s.servicoId === tipo.id);
+    const catalogo = tiposServico.length > 0 ? tiposServico : [
+      { id: 'seguro', chave: 'seguro', nome: 'Seguros', cor: '#16a34a' },
+      { id: 'extintor', chave: 'extintor', nome: 'Extintores', cor: '#ef4444' }, 
+      { id: 'dedetizacao', chave: 'dedetizacao', nome: 'Dedetização', cor: '#d4202a' },
+      { id: 'reservatorio', chave: 'reservatorio', nome: 'Reservatórios', cor: '#0ea5e9' },
+      { id: 'avcb', chave: 'avcb', nome: 'AVCB', cor: '#d97706' },
+      { id: 'spda', chave: 'spda', nome: 'SPDA', cor: '#8b5cf6' }
+    ];
+
+    return catalogo.map(tipo => {
+      const chave = tipo.chave || tipo.id;
+      const srvs = servicos.filter(s => s.servicoId === chave || s.servicoChave === chave);
       const emDia = srvs.filter(s => s.statusCalc === 'em_dia').length;
       const aVencer = srvs.filter(s => s.statusCalc === 'a_vencer').length;
       const vencidos = srvs.filter(s => s.statusCalc === 'vencido').length;
@@ -14,16 +23,19 @@ export default function ServiceTypeStatus({ servicos }) {
       const total = srvs.length;
       const percEmDia = total > 0 ? Math.round((emDia / total) * 100) : 0;
       
-      return { ...tipo, emDia, aVencer, vencidos, sem, percEmDia, total };
+      return { ...tipo, id: chave, emDia, aVencer, vencidos, sem, percEmDia, total };
     });
-  }, [servicos]);
+  }, [servicos, tiposServico]);
 
   const Icos = {
     'seguro': IcoSeguro,
-    'extintores': IcoVencido, // placeholder
+    'extintor': IcoVencido,
+    'extintores': IcoVencido,
     'dedetizacao': IcoCheck,
+    'reservatorio': IcoDoc,
     'reservatorios': IcoDoc,
     'avcb': IcoCondominio,
+    'spda': IcoSpda,
   };
 
   return (
@@ -49,18 +61,18 @@ export default function ServiceTypeStatus({ servicos }) {
               return (
                 <tr key={row.id}>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: '#334155' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
                       <div style={{ color: row.cor, fontSize: '18px', display: 'flex' }}><Icon /></div>
-                      {row.nome}
+                      <span className="dash-service-name">{row.nome}</span>
                     </div>
                   </td>
-                  <td style={{ textAlign: 'center', color: '#16a34a' }}>{row.emDia}</td>
-                  <td style={{ textAlign: 'center', color: '#d97706' }}>{row.aVencer}</td>
-                  <td style={{ textAlign: 'center', color: '#dc2626' }}>{row.vencidos}</td>
+                  <td style={{ textAlign: 'center', color: '#16a34a', fontWeight: 600 }}>{row.emDia}</td>
+                  <td style={{ textAlign: 'center', color: '#f59e0b', fontWeight: 600 }}>{row.aVencer}</td>
+                  <td style={{ textAlign: 'center', color: '#ef4444', fontWeight: 600 }}>{row.vencidos}</td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569', width: '36px' }}>{row.percEmDia}%</span>
-                      <div style={{ flex: 1, height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
+                      <span className="dash-service-pct" style={{ fontSize: '13px', fontWeight: 600, width: '36px' }}>{row.percEmDia}%</span>
+                      <div className="dash-progress-track" style={{ flex: 1, height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
                         <div style={{ width: `${row.percEmDia}%`, height: '100%', background: '#16a34a', borderRadius: '3px' }}></div>
                       </div>
                     </div>
@@ -70,9 +82,6 @@ export default function ServiceTypeStatus({ servicos }) {
             })}
           </tbody>
         </table>
-      </div>
-      <div style={{ marginTop: '16px' }}>
-        <a href="/servicos" style={{ fontSize: '13px', fontWeight: 600, color: '#2563eb' }}>Ver todos os serviços →</a>
       </div>
     </div>
   );

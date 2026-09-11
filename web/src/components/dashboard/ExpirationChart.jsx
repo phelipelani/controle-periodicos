@@ -21,9 +21,9 @@ export default function ExpirationChart({ servicos }) {
       });
     }
 
-    // Agrupa os serviços pelas datas de validade (apenas os que não são sem_registro)
+    // Agrupa os serviços pelas datas de validade (apenas os que não são sem_registro e possuem data)
     servicos.forEach(s => {
-      if (s.statusCalc === 'sem_registro') return;
+      if (s.statusCalc === 'sem_registro' || !s.dataValidade) return;
       const yyyymm = s.dataValidade.slice(0, 7);
       const mesRef = meses.find(m => m.mesRaw === yyyymm);
       if (mesRef) {

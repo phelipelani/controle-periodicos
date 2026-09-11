@@ -19,11 +19,34 @@ const agendamentosRoutes = require('./routes/agendamentos');
 const dashboardRoutes = require('./routes/dashboard');
 const historicoRoutes = require('./routes/historico');
 const uploadRoutes = require('./routes/upload');
+const extintoresRoutes = require('./routes/extintores');
+const reservatoriosRoutes = require('./routes/reservatorios');
+const segurosRoutes = require('./routes/seguros');
+const spdaRoutes = require('./routes/spda');
+const avcbRoutes = require('./routes/avcb');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors());
+// Configuração completa de CORS para permitir requisições de localhost, LAN e ngrok
+app.use(
+  cors({
+    origin: true, // Reflete dinamicamente a origem da requisição (ngrok, localhost, etc.)
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'ngrok-skip-browser-warning',
+      'x-requested-with',
+      'Accept',
+      'Origin'
+    ],
+    exposedHeaders: ['Content-Disposition']
+  })
+);
+app.options('*', cors());
+
 app.use(express.json());
 
 // --- Autenticação ---
@@ -35,14 +58,29 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 app.get('/api/auth/me', autenticar, (req, res) => {
-  res.json({ id: req.usuario.id, nome: req.usuario.nome, email: req.usuario.email, papel: req.usuario.papel });
+  res.json({
+    id: req.usuario.id,
+    nome: req.usuario.nome,
+    email: req.usuario.email,
+    papel: req.usuario.papel,
+    empresa_nome: req.usuario.empresa_nome || null,
+    servicos_permitidos: req.usuario.servicos_permitidos || null
+  });
 });
+
+// --- Rotas públicas de imagem e preview de upload ---
+app.use('/api/upload', uploadRoutes);
 
 // --- Rotas protegidas ---
 app.use('/api', autenticar);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/condominios', condominiosRoutes);
 app.use('/api/servicos', servicosRoutes);
+app.use('/api/extintores', extintoresRoutes);
+app.use('/api/reservatorios', reservatoriosRoutes);
+app.use('/api/seguros', segurosRoutes);
+app.use('/api/spda', spdaRoutes);
+app.use('/api/avcb', avcbRoutes);
 app.use('/api/agendamentos', agendamentosRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/historico', historicoRoutes);

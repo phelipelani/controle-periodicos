@@ -28,7 +28,7 @@ function periodicidadeEfetiva(cs, servico) {
 // a data de validade de um serviço do tipo VALIDADE.
 // Para periódico: `data` é a data de realização.
 // Para validade: `data` é a própria data de vencimento/validade.
-function registrarServico({ condominioId, servicoId, data, registradoPor, origem = 'manual', empresa = null, observacao = null }) {
+function registrarServico({ condominioId, servicoId, data, registradoPor, origem = 'manual', empresa = null, observacao = null, anexo = null }) {
   const servico = getServico(servicoId);
   if (!servico) throw new Error('Serviço inexistente');
   const cs = getOrCreateCondominioServico(condominioId, servicoId);
@@ -43,14 +43,16 @@ function registrarServico({ condominioId, servicoId, data, registradoPor, origem
     dataVencimento = calcularVencimentoPeriodico(data, periodicidadeEfetiva(cs, servico));
   }
 
+  const empresaNorm = empresa ? String(empresa).trim().toUpperCase() : null;
+
   db.prepare(
     'UPDATE condominio_servicos SET ultima_realizacao = ?, data_vencimento = ? WHERE id = ?'
   ).run(ultimaRealizacao, dataVencimento, cs.id);
 
   db.prepare(`
-    INSERT INTO historico (condominio_servico_id, data_realizacao, data_vencimento, empresa, registrado_por, origem, observacao)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(cs.id, data, dataVencimento, empresa, registradoPor || null, origem, observacao);
+    INSERT INTO historico (condominio_servico_id, data_realizacao, data_vencimento, empresa, registrado_por, origem, observacao, anexo)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(cs.id, data, dataVencimento, empresaNorm, registradoPor || null, origem, observacao, anexo);
 
   return db.prepare('SELECT * FROM condominio_servicos WHERE id = ?').get(cs.id);
 }

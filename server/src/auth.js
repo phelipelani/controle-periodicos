@@ -6,8 +6,26 @@ const JWT_SECRET = process.env.JWT_SECRET || 'controle-periodicos-dev-secret';
 const TOKEN_EXPIRA = '7d';
 
 function gerarToken(usuario) {
+  let servicos = null;
+  if (usuario.servicos_permitidos) {
+    try {
+      servicos = typeof usuario.servicos_permitidos === 'string' 
+        ? JSON.parse(usuario.servicos_permitidos) 
+        : usuario.servicos_permitidos;
+    } catch (e) {
+      servicos = null;
+    }
+  }
+
   return jwt.sign(
-    { id: usuario.id, nome: usuario.nome, email: usuario.email, papel: usuario.papel },
+    { 
+      id: usuario.id, 
+      nome: usuario.nome, 
+      email: usuario.email, 
+      papel: usuario.papel, 
+      empresa_nome: usuario.empresa_nome || null,
+      servicos_permitidos: servicos
+    },
     JWT_SECRET,
     { expiresIn: TOKEN_EXPIRA }
   );
@@ -23,7 +41,25 @@ function login(email, senha) {
 }
 
 function publico(u) {
-  return { id: u.id, nome: u.nome, email: u.email, papel: u.papel, ativo: !!u.ativo };
+  let servicos = null;
+  if (u.servicos_permitidos) {
+    try {
+      servicos = typeof u.servicos_permitidos === 'string' 
+        ? JSON.parse(u.servicos_permitidos) 
+        : u.servicos_permitidos;
+    } catch (e) {
+      servicos = null;
+    }
+  }
+  return { 
+    id: u.id, 
+    nome: u.nome, 
+    email: u.email, 
+    papel: u.papel, 
+    empresa_nome: u.empresa_nome || null, 
+    servicos_permitidos: servicos,
+    ativo: !!u.ativo 
+  };
 }
 
 // Middleware: exige token válido.

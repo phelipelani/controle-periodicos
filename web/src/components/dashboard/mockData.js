@@ -6,7 +6,8 @@ export const tiposServico = [
   { id: 'extintores', nome: 'Extintores', cor: '#2563EB' }, 
   { id: 'dedetizacao', nome: 'Dedetização', cor: '#16A34A' },
   { id: 'reservatorios', nome: 'Reservatórios', cor: '#0284C7' },
-  { id: 'avcb', nome: 'AVCB', cor: '#475569' }
+  { id: 'avcb', nome: 'AVCB', cor: '#475569' },
+  { id: 'spda', nome: 'SPDA', cor: '#8B5CF6' }
 ];
 
 export const calcularStatus = (dataValidade) => {

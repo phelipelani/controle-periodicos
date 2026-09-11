@@ -5,7 +5,13 @@ const { exigirAdmin, publico } = require('../auth');
 
 const router = express.Router();
 
-// Todas as rotas de usuários exigem admin.
+// Rota pública para qualquer usuário autenticado listar gerentes ativos
+router.get('/gerentes', (req, res) => {
+  const rows = db.prepare("SELECT id, nome, email, papel, ativo FROM usuarios WHERE papel = 'gerente' AND ativo = 1 ORDER BY nome").all();
+  res.json(rows);
+});
+
+// Todas as demais rotas de gerenciamento de usuários exigem admin.
 router.use(exigirAdmin);
 
 router.get('/', (req, res) => {
@@ -14,7 +20,7 @@ router.get('/', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { nome, email, senha, papel } = req.body || {};
+  const { nome, email, senha, papel, empresa_nome, servicos_permitidos } = req.body || {};
   if (!nome || !email || !senha) {
     return res.status(400).json({ erro: 'Nome, email e senha são obrigatórios' });
   }
@@ -22,10 +28,17 @@ router.post('/', (req, res) => {
   const existe = db.prepare('SELECT id FROM usuarios WHERE email = ?').get(emailNorm);
   if (existe) return res.status(409).json({ erro: 'Já existe um usuário com esse email' });
 
+  const papelValido = ['admin', 'gerente', 'empresa'].includes(papel) ? papel : 'gerente';
+  const empresaValida = papelValido === 'empresa' ? (empresa_nome || nome).trim().toUpperCase() : null;
+  const nomeFinal = papelValido === 'empresa' ? (empresaValida || nome.trim().toUpperCase()) : nome;
+  const servicosValidos = papelValido === 'empresa' && Array.isArray(servicos_permitidos)
+    ? JSON.stringify(servicos_permitidos)
+    : null;
+
   const hash = bcrypt.hashSync(String(senha), 10);
   const info = db
-    .prepare("INSERT INTO usuarios (nome, email, senha_hash, papel) VALUES (?, ?, ?, ?)")
-    .run(nome, emailNorm, hash, papel === 'admin' ? 'admin' : 'gerente');
+    .prepare("INSERT INTO usuarios (nome, email, senha_hash, papel, empresa_nome, servicos_permitidos) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(nomeFinal, emailNorm, hash, papelValido, empresaValida, servicosValidos);
   const novo = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(publico(novo));
 });
@@ -35,12 +48,24 @@ router.put('/:id', (req, res) => {
   const usuario = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(id);
   if (!usuario) return res.status(404).json({ erro: 'Usuário não encontrado' });
 
-  const { nome, papel, ativo, senha } = req.body || {};
+  const { nome, papel, ativo, senha, empresa_nome, servicos_permitidos } = req.body || {};
+  const papelValido = papel !== undefined ? (['admin', 'gerente', 'empresa'].includes(papel) ? papel : 'gerente') : usuario.papel;
+  const rawEmpresa = empresa_nome !== undefined ? empresa_nome : (usuario.empresa_nome || nome || usuario.nome);
+  const empresaValida = papelValido === 'empresa' ? (rawEmpresa ? String(rawEmpresa).trim().toUpperCase() : null) : null;
+  const nomeFinal = papelValido === 'empresa' && (nome !== undefined || empresaValida)
+    ? (empresaValida || String(nome || usuario.nome).trim().toUpperCase())
+    : (nome ?? usuario.nome);
+  const servicosValidos = papelValido === 'empresa'
+    ? (servicos_permitidos !== undefined ? (Array.isArray(servicos_permitidos) ? JSON.stringify(servicos_permitidos) : null) : usuario.servicos_permitidos)
+    : null;
+
   db.prepare(
-    'UPDATE usuarios SET nome = ?, papel = ?, ativo = ? WHERE id = ?'
+    'UPDATE usuarios SET nome = ?, papel = ?, empresa_nome = ?, servicos_permitidos = ?, ativo = ? WHERE id = ?'
   ).run(
-    nome ?? usuario.nome,
-    papel === 'admin' ? 'admin' : 'gerente',
+    nomeFinal,
+    papelValido,
+    empresaValida,
+    servicosValidos,
     ativo === undefined ? usuario.ativo : ativo ? 1 : 0,
     id
   );

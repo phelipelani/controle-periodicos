@@ -1,5 +1,6 @@
 import React from 'react';
 import { IcoCondominio, IcoCheck, IcoRelogio, IcoCalendario, IcoDoc, IcoSino } from '../icons';
+import AnimatedNumber from '../AnimatedNumber';
 
 export const DedetizacaoHeader = ({ onNovoAgendamento }) => (
   <div className="ded-header">
@@ -16,71 +17,122 @@ export const DedetizacaoHeader = ({ onNovoAgendamento }) => (
   </div>
 );
 
-export const DedetizacaoKpis = ({ stats, onKpiAction }) => (
-  <div className="ded-kpis">
-    <div className="ded-kpi-card" style={{borderTop: '4px solid #3b82f6'}}>
-      <div className="ded-kpi-top">
-        <div className="ded-kpi-icon" style={{background: '#eff6ff', color: '#3b82f6'}}><IcoCondominio /></div>
-        <div className="ded-kpi-info">
-          <span className="ded-kpi-label">Condomínios cadastrados</span>
-          <span className="ded-kpi-value">{stats.condominios}</span>
-        </div>
-      </div>
-      <div className="ded-kpi-desc">Total monitorados</div>
-      <button onClick={() => onKpiAction('condominios')} className="ded-kpi-link" style={{color: '#3b82f6', background: 'none', border: 'none', padding: 0, cursor: 'pointer'}}>Ver condomínios &rarr;</button>
-    </div>
+export const DedetizacaoStatusBadge = ({ status }) => {
+  const map = {
+    'Realizado': { cls: 'badge-realizado', label: 'Realizado' },
+    'Agendado': { cls: 'badge-agendado', label: 'Agendado' },
+    'Pendente': { cls: 'badge-pendente', label: 'Pendente' },
+    'Atrasado': { cls: 'badge-atrasado', label: 'Atrasado' }
+  };
+  const badge = map[status] || { cls: 'badge-pendente', label: status || 'Pendente' };
+  return <span className={`ded-badge ${badge.cls}`}>{badge.label}</span>;
+};
 
-    <div className="ded-kpi-card" style={{borderTop: '4px solid #16a34a'}}>
-      <div className="ded-kpi-top">
-        <div className="ded-kpi-icon" style={{background: '#f0fdf4', color: '#16a34a'}}><IcoCheck /></div>
-        <div className="ded-kpi-info">
-          <span className="ded-kpi-label">Em dia</span>
-          <span className="ded-kpi-value">{stats.emDia}</span>
-        </div>
-      </div>
-      <div className="ded-kpi-desc">{stats.percEmDia}% do total</div>
-      <button onClick={() => onKpiAction('em_dia')} className="ded-kpi-link" style={{color: '#16a34a', background: 'none', border: 'none', padding: 0, cursor: 'pointer'}}>Ver em dia &rarr;</button>
-    </div>
+export const DedetizacaoKpis = ({ stats = {}, filtroAtivo = 'Todos', onKpiAction }) => {
+  const total = stats.condominios || 1;
+  const pctEmDia = stats.condominios > 0 ? Math.round((stats.emDia / stats.condominios) * 100) : 0;
+  const pctPendentes = stats.condominios > 0 ? Math.round((stats.pendentes / stats.condominios) * 100) : 0;
+  const pctProximas = stats.condominios > 0 ? Math.round((stats.proximas / stats.condominios) * 100) : 0;
+  const pctSemNota = stats.condominios > 0 ? Math.round((stats.semNota / stats.condominios) * 100) : 0;
 
-    <div className="ded-kpi-card" style={{borderTop: '4px solid #d97706'}}>
-      <div className="ded-kpi-top">
-        <div className="ded-kpi-icon" style={{background: '#fffbeb', color: '#d97706'}}><IcoRelogio /></div>
-        <div className="ded-kpi-info">
-          <span className="ded-kpi-label">Pendentes</span>
-          <span className="ded-kpi-value">{stats.pendentes}</span>
+  return (
+    <div className="ded-kpis">
+      <div
+        className={`ded-kpi-card ${filtroAtivo === 'Todos' ? 'active' : ''}`}
+        style={{ borderTop: '4px solid #3b82f6', position: 'relative', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        onClick={() => onKpiAction('todos')}
+      >
+        <div className="ded-kpi-top">
+          <div className="ded-kpi-icon" style={{ background: '#eff6ff', color: '#3b82f6' }}><IcoCondominio /></div>
+          <div className="ded-kpi-info">
+            <span className="ded-kpi-label">Condomínios cadastrados</span>
+            <span className="ded-kpi-value">
+              <AnimatedNumber value={stats.condominios} />
+            </span>
+          </div>
         </div>
-      </div>
-      <div className="ded-kpi-desc">Aguardando execução</div>
-      <button onClick={() => onKpiAction('pendentes')} className="ded-kpi-link" style={{color: '#d97706', background: 'none', border: 'none', padding: 0, cursor: 'pointer'}}>Ver pendentes &rarr;</button>
-    </div>
-
-    <div className="ded-kpi-card" style={{borderTop: '4px solid #8b5cf6'}}>
-      <div className="ded-kpi-top">
-        <div className="ded-kpi-icon" style={{background: '#f5f3ff', color: '#8b5cf6'}}><IcoCalendario /></div>
-        <div className="ded-kpi-info">
-          <span className="ded-kpi-label">Próximas execuções</span>
-          <span className="ded-kpi-value">{stats.proximas}</span>
+        <div className="ded-kpi-desc">
+          {stats.empresaAtiva ? `Empresa: ${stats.empresaAtiva}` : 'Total no escopo'}
         </div>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, height: '3px', width: stats.condominios > 0 ? '100%' : '0%', background: '#3b82f6', transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }} />
       </div>
-      <div className="ded-kpi-desc">Próximos 30 dias</div>
-      <button onClick={() => onKpiAction('proximas')} className="ded-kpi-link" style={{color: '#8b5cf6', background: 'none', border: 'none', padding: 0, cursor: 'pointer'}}>Ver próximas &rarr;</button>
-    </div>
 
-    <div className="ded-kpi-card" style={{borderTop: '4px solid #dc2626'}}>
-      <div className="ded-kpi-top">
-        <div className="ded-kpi-icon" style={{background: '#fef2f2', color: '#dc2626'}}><IcoDoc /></div>
-        <div className="ded-kpi-info">
-          <span className="ded-kpi-label">Sem nota/recibo</span>
-          <span className="ded-kpi-value">{stats.semNota}</span>
+      <div
+        className={`ded-kpi-card ${filtroAtivo === 'Realizado' ? 'active' : ''}`}
+        style={{ borderTop: '4px solid #16a34a', position: 'relative', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        onClick={() => onKpiAction('em_dia')}
+      >
+        <div className="ded-kpi-top">
+          <div className="ded-kpi-icon" style={{ background: '#f0fdf4', color: '#16a34a' }}><IcoCheck /></div>
+          <div className="ded-kpi-info">
+            <span className="ded-kpi-label">Em dia</span>
+            <span className="ded-kpi-value" style={{ color: '#16a34a' }}>
+              <AnimatedNumber value={stats.emDia} />
+            </span>
+          </div>
         </div>
+        <div className="ded-kpi-desc">{pctEmDia}% do escopo</div>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, height: '3px', width: `${pctEmDia}%`, background: '#16a34a', transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }} />
       </div>
-      <div className="ded-kpi-desc">Requer atenção</div>
-      <button onClick={() => onKpiAction('sem_nota')} className="ded-kpi-link" style={{color: '#dc2626', background: 'none', border: 'none', padding: 0, cursor: 'pointer'}}>Ver sem nota &rarr;</button>
-    </div>
-  </div>
-);
 
-export const DedetizacaoFilters = ({ filtros, setFiltros, onClear }) => (
+      <div
+        className={`ded-kpi-card ${filtroAtivo === 'Pendente' ? 'active' : ''}`}
+        style={{ borderTop: '4px solid #d97706', position: 'relative', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        onClick={() => onKpiAction('pendentes')}
+      >
+        <div className="ded-kpi-top">
+          <div className="ded-kpi-icon" style={{ background: '#fffbeb', color: '#d97706' }}><IcoRelogio /></div>
+          <div className="ded-kpi-info">
+            <span className="ded-kpi-label">Pendentes</span>
+            <span className="ded-kpi-value" style={{ color: '#d97706' }}>
+              <AnimatedNumber value={stats.pendentes} />
+            </span>
+          </div>
+        </div>
+        <div className="ded-kpi-desc">{pctPendentes}% do escopo</div>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, height: '3px', width: `${pctPendentes}%`, background: '#d97706', transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }} />
+      </div>
+
+      <div
+        className={`ded-kpi-card ${filtroAtivo === 'Agendado' ? 'active' : ''}`}
+        style={{ borderTop: '4px solid #8b5cf6', position: 'relative', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        onClick={() => onKpiAction('proximas')}
+      >
+        <div className="ded-kpi-top">
+          <div className="ded-kpi-icon" style={{ background: '#f5f3ff', color: '#8b5cf6' }}><IcoCalendario /></div>
+          <div className="ded-kpi-info">
+            <span className="ded-kpi-label">Próximas execuções</span>
+            <span className="ded-kpi-value" style={{ color: '#8b5cf6' }}>
+              <AnimatedNumber value={stats.proximas} />
+            </span>
+          </div>
+        </div>
+        <div className="ded-kpi-desc">{pctProximas}% do escopo</div>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, height: '3px', width: `${pctProximas}%`, background: '#8b5cf6', transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }} />
+      </div>
+
+      <div
+        className={`ded-kpi-card ${filtroAtivo === 'Sem nota' ? 'active' : ''}`}
+        style={{ borderTop: '4px solid #dc2626', position: 'relative', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        onClick={() => onKpiAction('sem_nota')}
+      >
+        <div className="ded-kpi-top">
+          <div className="ded-kpi-icon" style={{ background: '#fef2f2', color: '#dc2626' }}><IcoDoc /></div>
+          <div className="ded-kpi-info">
+            <span className="ded-kpi-label">Sem nota/recibo</span>
+            <span className="ded-kpi-value" style={{ color: '#dc2626' }}>
+              <AnimatedNumber value={stats.semNota} />
+            </span>
+          </div>
+        </div>
+        <div className="ded-kpi-desc">{pctSemNota}% do escopo</div>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, height: '3px', width: `${pctSemNota}%`, background: '#dc2626', transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }} />
+      </div>
+    </div>
+  );
+};
+
+export const DedetizacaoFilters = ({ filtros, setFiltros, onClear, empresas = [] }) => (
   <div className="ded-filters">
     <div className="ded-filter-group">
       <label>Buscar condomínio</label>
@@ -114,7 +166,11 @@ export const DedetizacaoFilters = ({ filtros, setFiltros, onClear }) => (
         onChange={e => setFiltros({...filtros, empresa: e.target.value})}
       >
         <option value="Todas">Todas</option>
-        <option value="DDD RIN">DDD RIN</option>
+        {empresas.map((emp) => (
+          <option key={emp} value={emp}>
+            {emp}
+          </option>
+        ))}
       </select>
     </div>
     <div className="ded-filter-group">
@@ -147,42 +203,31 @@ export const DedetizacaoFilters = ({ filtros, setFiltros, onClear }) => (
         <option value="Pendente">Pendente</option>
       </select>
     </div>
-    <button className="ded-btn-clear" onClick={onClear}>Limpar filtros</button>
+    <div className="ded-filter-group" style={{ display: 'flex', alignItems: 'flex-end' }}>
+      <button className="ded-btn-clear" onClick={onClear}>
+        <IcoSino /> Limpar filtros
+      </button>
+    </div>
   </div>
 );
 
-export const DedetizacaoStatusBadge = ({ status }) => {
-  const map = {
-    'Agendado': 'agendado',
-    'Pendente': 'pendente',
-    'Realizado': 'realizado',
-    'Atrasado': 'atrasado',
-    'Cancelado': 'cancelado'
-  };
-  return <span className={`ded-badge ${map[status]}`}>{status}</span>;
-};
-
 export const DedetizacaoFooterLegenda = () => (
-  <div className="ded-legends">
-    <div className="ded-legend-item">
-      <div className="ded-legend-icon" style={{color:'#3b82f6'}}><IcoCalendario /></div>
-      <div className="ded-legend-text"><strong>Agendado</strong><p>A dedetização foi agendada, mas ainda não foi realizada.</p></div>
+  <div className="ded-footer-legenda">
+    <div className="ded-legenda-item">
+      <span className="ded-badge badge-agendado">Agendado</span>
+      <span>Visita futura confirmada</span>
     </div>
-    <div className="ded-legend-item">
-      <div className="ded-legend-icon" style={{color:'#d97706'}}><IcoRelogio /></div>
-      <div className="ded-legend-text"><strong>Pendente</strong><p>A data de validade está próxima e ainda não houve execução.</p></div>
+    <div className="ded-legenda-item">
+      <span className="ded-badge badge-pendente">Pendente</span>
+      <span>Sem agendamento ou fora da validade</span>
     </div>
-    <div className="ded-legend-item">
-      <div className="ded-legend-icon" style={{color:'#16a34a'}}><IcoCheck /></div>
-      <div className="ded-legend-text"><strong>Realizado</strong><p>Execução realizada dentro do prazo e registrada no sistema.</p></div>
+    <div className="ded-legenda-item">
+      <span className="ded-badge badge-realizado">Realizado</span>
+      <span>Serviço executado dentro do prazo</span>
     </div>
-    <div className="ded-legend-item">
-      <div className="ded-legend-icon" style={{color:'#dc2626'}}><IcoSino /></div>
-      <div className="ded-legend-text"><strong>Atrasado</strong><p>A data de validade passou e a execução não foi registrada.</p></div>
-    </div>
-    <div className="ded-legend-item">
-      <div className="ded-legend-icon" style={{color:'#dc2626'}}><IcoDoc /></div>
-      <div className="ded-legend-text"><strong>Sem nota/recibo</strong><p>Execução realizada, mas ainda não foi anexada a nota/recibo.</p></div>
+    <div className="ded-legenda-item">
+      <span className="ded-badge badge-atrasado">Atrasado</span>
+      <span>Validade vencida sem novo registro</span>
     </div>
   </div>
 );

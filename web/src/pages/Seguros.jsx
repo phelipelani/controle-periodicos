@@ -1,466 +1,407 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { IcoCondominio, IcoSeguro, IcoRelogio, IcoVencido, IcoCalendario, IcoCheck } from '../components/icons';
+import React, { useState, useEffect, useMemo } from 'react';
+import { api } from '../api';
+import { useAuth } from '../auth/AuthContext';
 import '../seguros.css';
 
-// SVG Icons inline para os botões e outros elementos
-const IcoPlus = () => <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-const IcoEye = () => <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
-const IcoEdit = () => <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
-const IcoMore = () => <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>;
+import { IcoSeguro } from '../components/icons';
+import SegurosKpis from '../components/seguros/SegurosKpis';
+import SegurosFilters from '../components/seguros/SegurosFilters';
+import SegurosTable from '../components/seguros/SegurosTable';
+import SeguroFichaDrawer from '../components/seguros/SeguroFichaDrawer';
+import SeguroNovoEditarDrawer from '../components/seguros/SeguroNovoEditarDrawer';
 
-// Mock Data inicial
-const gerarMocks = () => {
-  const dados = [];
-  const hoje = new Date();
-  
-  const seguradoras = ['Porto Seguro', 'Tokio Marine', 'SulAmérica', 'HDI Seguros', 'Mapfre', 'Allianz', 'Bradesco Seguros'];
-  const corretoras = ['Corretora Alfa', 'Corretora Beta', 'Corretora Gama', 'Corretora Delta'];
-  const gerentes = ['Lani', 'Administrador', 'Carlos', 'Maria'];
-  const statusGeral = ['vencido', 'a_vencer', 'ativo'];
-
-  for (let i = 1; i <= 124; i++) {
-    const statusIdx = i <= 10 ? 0 : i <= 26 ? 1 : 2; // 10 vencidos, 16 a vencer, resto ativos
-    const st = statusGeral[statusIdx];
-    
-    let dtValidade = new Date();
-    if (st === 'vencido') {
-      dtValidade.setDate(dtValidade.getDate() - Math.floor(Math.random() * 60) - 1);
-    } else if (st === 'a_vencer') {
-      dtValidade.setDate(dtValidade.getDate() + Math.floor(Math.random() * 29) + 1);
-    } else {
-      dtValidade.setDate(dtValidade.getDate() + Math.floor(Math.random() * 300) + 31);
-    }
-
-    const dtRenovacao = new Date(dtValidade);
-    dtRenovacao.setFullYear(dtRenovacao.getFullYear() - 1);
-
-    dados.push({
-      id: i,
-      codigoCondominio: String(i).padStart(3, '0'),
-      nomeCondominio: `Condomínio Exemplo ${i}`,
-      seguradora: seguradoras[i % seguradoras.length],
-      corretora: corretoras[i % corretoras.length],
-      gerente: gerentes[i % gerentes.length],
-      numeroApolice: `AP-${Math.floor(Math.random() * 100000)}`,
-      dataRenovacao: dtRenovacao.toISOString().split('T')[0],
-      dataValidade: dtValidade.toISOString().split('T')[0],
-    });
-  }
-  return dados;
-};
-
-const mockSeguros = gerarMocks();
-
-// Funções utilitárias
-const calcularStatus = (dataValidade) => {
-  if (!dataValidade) return 'ativo';
-  const hoje = new Date();
-  hoje.setHours(0,0,0,0);
-  const val = new Date(dataValidade);
-  // timezone fix manual pro mock se precisar, mas string yyyy-mm-dd em Date as vezes cai num dia antes dependendo do TZ
-  // usando split pra garantir
-  const [y, m, d] = dataValidade.split('-');
-  const dataReal = new Date(y, m - 1, d);
-  
-  const diffTime = dataReal - hoje;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  if (diffDays < 0) return 'vencido';
-  if (diffDays <= 30) return 'a_vencer';
-  return 'ativo';
-};
-
-const formatarDataBr = (dataIso) => {
-  if (!dataIso) return '--';
-  const [y, m, d] = dataIso.split('-');
-  return `${d}/${m}/${y}`;
+const initialFiltros = {
+  busca: '',
+  seguradora: 'Todas',
+  corretora: 'Todas',
+  gerente: 'Todos',
+  dataDe: '',
+  dataAte: '',
+  status: 'Todos'
 };
 
 export default function Seguros() {
-  const [seguros, setSeguros] = useState(mockSeguros);
-  const [filtroBusca, setFiltroBusca] = useState('');
-  const [filtroSeguradora, setFiltroSeguradora] = useState('Todas');
-  const [filtroCorretora, setFiltroCorretora] = useState('Todas');
-  const [filtroGerente, setFiltroGerente] = useState('Todos');
-  const [filtroStatus, setFiltroStatus] = useState('Todos');
-  const [filtroVencimentoDe, setFiltroVencimentoDe] = useState('');
-  const [filtroVencimentoAte, setFiltroVencimentoAte] = useState('');
-  
-  const [ordemCol, setOrdemCol] = useState('auto'); // auto, dataValidade, etc.
-  const [ordemDir, setOrdemDir] = useState('asc'); // asc, desc
-  
+  const { usuario, isAdmin } = useAuth();
+  const [seguros, setSeguros] = useState([]);
+  const [kpis, setKpis] = useState({});
+  const [seguradoras, setSeguradoras] = useState([]);
+  const [corretoras, setCorretoras] = useState([]);
+  const [gerentes, setGerentes] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState('');
+  const [toast, setToast] = useState('');
+
+  const [filtros, setFiltros] = useState(initialFiltros);
   const [paginaAtual, setPaginaAtual] = useState(1);
-  const [itensPorPagina, setItensPorPagina] = useState(10);
-  
-  const [modalAtivo, setModalAtivo] = useState(null); // 'novo', 'visualizar', 'renovar'
-  const [seguroSelecionado, setSeguroSelecionado] = useState(null);
-  
-  const [menuAbertoId, setMenuAbertoId] = useState(null);
+  const [itensPorPagina, setItensPorPagina] = useState(15);
 
-  // Listas para os selects (dinâmicas baseadas nos dados)
-  const seguradoras = ['Todas', ...Array.from(new Set(mockSeguros.map(s => s.seguradora)))];
-  const corretoras = ['Todas', ...Array.from(new Set(mockSeguros.map(s => s.corretora)))];
-  const gerentes = ['Todos', ...Array.from(new Set(mockSeguros.map(s => s.gerente)))];
+  const [colunaOrdenacao, setColunaOrdenacao] = useState('status_padrao');
+  const [ordemDirecao, setOrdemDirecao] = useState('asc');
 
-  // Processamento dos dados com cálculos dinâmicos
-  const dadosProcessados = useMemo(() => {
-    return seguros.map(s => ({
-      ...s,
-      statusCalc: calcularStatus(s.dataValidade)
-    }));
-  }, [seguros]);
+  // Drawers
+  const [fichaCondominioId, setFichaCondominioId] = useState(null);
+  const [drawerNovoEditarAberto, setDrawerNovoEditarAberto] = useState(false);
+  const [seguroEditando, setSeguroEditando] = useState(null);
 
-  // KPIs
-  const totalCondominios = dadosProcessados.length;
-  const segurosAtivos = dadosProcessados.filter(s => s.statusCalc === 'ativo').length;
-  const ativosPerc = totalCondominios ? ((segurosAtivos / totalCondominios) * 100).toFixed(1) : 0;
-  const proximosAVencer = dadosProcessados.filter(s => s.statusCalc === 'a_vencer').length;
-  const segurosVencidos = dadosProcessados.filter(s => s.statusCalc === 'vencido').length;
+  const podeEditarCadastrais = isAdmin || usuario?.papel === 'gerente';
 
-  // Filtros
-  const dadosFiltrados = useMemo(() => {
-    return dadosProcessados.filter(s => {
-      if (filtroBusca) {
-        const busca = filtroBusca.toLowerCase();
-        if (!s.nomeCondominio.toLowerCase().includes(busca) && !s.codigoCondominio.includes(busca)) return false;
-      }
-      if (filtroSeguradora !== 'Todas' && s.seguradora !== filtroSeguradora) return false;
-      if (filtroCorretora !== 'Todas' && s.corretora !== filtroCorretora) return false;
-      if (filtroGerente !== 'Todos' && s.gerente !== filtroGerente) return false;
-      
-      if (filtroStatus !== 'Todos') {
-        const mapSt = { 'Ativo': 'ativo', 'Próximo a vencer': 'a_vencer', 'Vencido': 'vencido' };
-        if (s.statusCalc !== mapSt[filtroStatus]) return false;
-      }
-      
-      if (filtroVencimentoDe && s.dataValidade < filtroVencimentoDe) return false;
-      if (filtroVencimentoAte && s.dataValidade > filtroVencimentoAte) return false;
-      
-      return true;
-    });
-  }, [dadosProcessados, filtroBusca, filtroSeguradora, filtroCorretora, filtroGerente, filtroStatus, filtroVencimentoDe, filtroVencimentoAte]);
-
-  // Ordenação
-  const dadosOrdenados = useMemo(() => {
-    const list = [...dadosFiltrados];
-    if (ordemCol === 'auto') {
-      const rank = { 'vencido': 1, 'a_vencer': 2, 'ativo': 3 };
-      list.sort((a, b) => {
-        if (rank[a.statusCalc] !== rank[b.statusCalc]) {
-          return rank[a.statusCalc] - rank[b.statusCalc];
-        }
-        return a.dataValidade.localeCompare(b.dataValidade);
-      });
-    } else {
-      list.sort((a, b) => {
-        let valA = a[ordemCol];
-        let valB = b[ordemCol];
-        if (valA < valB) return ordemDir === 'asc' ? -1 : 1;
-        if (valA > valB) return ordemDir === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-    return list;
-  }, [dadosFiltrados, ordemCol, ordemDir]);
-
-  // Paginação
-  const totalPaginas = Math.ceil(dadosOrdenados.length / itensPorPagina) || 1;
-  const pagAtualReal = Math.min(paginaAtual, totalPaginas);
-  const dadosPaginados = dadosOrdenados.slice((pagAtualReal - 1) * itensPorPagina, pagAtualReal * itensPorPagina);
+  const carregarDados = () => {
+    setCarregando(true);
+    api.get('/seguros')
+      .then((res) => {
+        setSeguros(res.seguros || []);
+        setKpis(res.kpis || {});
+        setSeguradoras(res.seguradoras || []);
+        setCorretoras(res.corretoras || []);
+        setErro('');
+      })
+      .catch((err) => {
+        setErro(err.message || 'Erro ao carregar dados de seguros.');
+      })
+      .finally(() => setCarregando(false));
+  };
 
   useEffect(() => {
-    if (paginaAtual > totalPaginas) setPaginaAtual(totalPaginas || 1);
-  }, [totalPaginas, paginaAtual]);
-
-  const alternarOrdem = (col) => {
-    if (ordemCol === col) {
-      if (ordemDir === 'asc') setOrdemDir('desc');
-      else { setOrdemCol('auto'); setOrdemDir('asc'); }
-    } else {
-      setOrdemCol(col);
-      setOrdemDir('asc');
-    }
-  };
-
-  const limparFiltros = () => {
-    setFiltroBusca('');
-    setFiltroSeguradora('Todas');
-    setFiltroCorretora('Todas');
-    setFiltroGerente('Todos');
-    setFiltroStatus('Todos');
-    setFiltroVencimentoDe('');
-    setFiltroVencimentoAte('');
-    setOrdemCol('auto');
-  };
-
-  const renderBadge = (status) => {
-    if (status === 'vencido') return <span className="sg-badge vencido">VENCIDO</span>;
-    if (status === 'a_vencer') return <span className="sg-badge avencer">PRÓXIMO A VENCER</span>;
-    return <span className="sg-badge ativo">ATIVO</span>;
-  };
-
-  const renderRowClass = (status) => {
-    if (status === 'vencido') return 'sg-row-vencido';
-    if (status === 'a_vencer') return 'sg-row-avencer';
-    return 'sg-row-ativo';
-  };
-  
-  const abrirMenuRow = (e, id) => {
-    e.stopPropagation();
-    setMenuAbertoId(menuAbertoId === id ? null : id);
-  };
-  
-  // Fecha o menu ao clicar fora
-  useEffect(() => {
-    const handleCb = () => setMenuAbertoId(null);
-    window.addEventListener('click', handleCb);
-    return () => window.removeEventListener('click', handleCb);
+    carregarDados();
+    api.get('/usuarios/gerentes')
+      .catch(() => api.get('/usuarios'))
+      .then((us) => setGerentes((us || []).filter((u) => u.papel === 'gerente' && (u.ativo === undefined || u.ativo === 1 || u.ativo === true))))
+      .catch(() => {});
   }, []);
 
+  const mostrarToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 4000);
+  };
+
+  const handleSalvar = async (payload) => {
+    await api.post('/seguros', payload);
+    mostrarToast('Seguro salvo com sucesso!');
+    carregarDados();
+  };
+
+  const handleRenovar = async (item) => {
+    const novaApolice = window.prompt(`Informe o número da nova apólice para ${item.condominio}:`, item.numeroApolice !== '—' ? item.numeroApolice : '');
+    if (novaApolice === null) return;
+
+    let novaDataValidade = '';
+    if (item.dataValidade) {
+      const [y, m, d] = item.dataValidade.split('-').map(Number);
+      const dataVenc = new Date(y + 1, m - 1, d);
+      novaDataValidade = `${dataVenc.getFullYear()}-${String(dataVenc.getMonth() + 1).padStart(2, '0')}-${String(dataVenc.getDate()).padStart(2, '0')}`;
+    }
+
+    try {
+      await api.post(`/seguros/${item.id}/renovar`, {
+        nova_apolice: novaApolice,
+        nova_data_renovacao: item.dataValidade || new Date().toISOString().split('T')[0],
+        nova_data_validade: novaDataValidade
+      });
+      mostrarToast('Apólice renovada com sucesso!');
+      carregarDados();
+    } catch (e) {
+      setErro(e.message || 'Erro ao renovar');
+    }
+  };
+
+  const handleExcluir = async (item) => {
+    if (!window.confirm(`Deseja limpar os dados de seguro do condomínio ${item.condominio}?`)) return;
+    try {
+      await api.del(`/seguros/${item.id}`);
+      mostrarToast('Registro de seguro removido com sucesso!');
+      carregarDados();
+    } catch (e) {
+      setErro(e.message || 'Erro ao excluir');
+    }
+  };
+
+  const handleNovo = () => {
+    setSeguroEditando(null);
+    setDrawerNovoEditarAberto(true);
+  };
+
+  const handleEditar = (item) => {
+    setSeguroEditando(item);
+    setDrawerNovoEditarAberto(true);
+  };
+
+  const handleVisualizar = (item) => {
+    setFichaCondominioId(item.condominioId || item.id);
+  };
+
+  // Filtros
+  const handleFiltroChange = (chave, valor) => {
+    setFiltros((prev) => ({ ...prev, [chave]: valor }));
+    setPaginaAtual(1);
+  };
+
+  const handleLimparFiltros = () => {
+    setFiltros(initialFiltros);
+    setPaginaAtual(1);
+  };
+
+  const kpisInteligentes = useMemo(() => {
+    const base = seguros.filter((item) => {
+      if (filtros.busca) {
+        const termo = filtros.busca.toLowerCase().trim();
+        const nomeMatch = (item.condominio || '').toLowerCase().includes(termo);
+        const codMatch = (item.codigo || '').toLowerCase().includes(termo);
+        const endMatch = item.endereco ? item.endereco.toLowerCase().includes(termo) : false;
+        if (!nomeMatch && !codMatch && !endMatch) return false;
+      }
+      if (filtros.seguradora !== 'Todas' && item.seguradora !== filtros.seguradora) return false;
+      if (filtros.corretora !== 'Todas' && item.corretora !== filtros.corretora) return false;
+      if (filtros.gerente !== 'Todos' && item.gerente !== filtros.gerente) return false;
+      if (filtros.dataDe && (!item.dataValidade || item.dataValidade < filtros.dataDe)) return false;
+      if (filtros.dataAte && (!item.dataValidade || item.dataValidade > filtros.dataAte)) return false;
+      return true;
+    });
+
+    const totalCondominios = base.length;
+    const segurosAtivos = base.filter((d) => d.status === 'ativo').length;
+    const proximosVencer = base.filter((d) => d.status === 'a_vencer').length;
+    const segurosVencidos = base.filter((d) => d.status === 'vencido').length;
+    const pctAtivos = totalCondominios > 0 ? ((segurosAtivos / totalCondominios) * 100).toFixed(1).replace('.', ',') + '%' : '0,0%';
+
+    return {
+      totalCondominios,
+      segurosAtivos,
+      proximosVencer,
+      segurosVencidos,
+      percentualAtivos: pctAtivos,
+      gerenteAtivo: filtros.gerente !== 'Todos' ? filtros.gerente : null
+    };
+  }, [seguros, filtros.busca, filtros.seguradora, filtros.corretora, filtros.gerente, filtros.dataDe, filtros.dataAte]);
+
+  const dadosFiltrados = useMemo(() => {
+    return seguros.filter((item) => {
+      // Busca texto
+      if (filtros.busca) {
+        const termo = filtros.busca.toLowerCase().trim();
+        const nomeMatch = item.condominio.toLowerCase().includes(termo);
+        const codMatch = item.codigo.toLowerCase().includes(termo);
+        const endMatch = item.endereco ? item.endereco.toLowerCase().includes(termo) : false;
+        if (!nomeMatch && !codMatch && !endMatch) return false;
+      }
+
+      // Seguradora
+      if (filtros.seguradora !== 'Todas') {
+        if (item.seguradora !== filtros.seguradora) return false;
+      }
+
+      // Corretora
+      if (filtros.corretora !== 'Todas') {
+        if (item.corretora !== filtros.corretora) return false;
+      }
+
+      // Gerente
+      if (filtros.gerente !== 'Todos') {
+        if (item.gerente !== filtros.gerente) return false;
+      }
+
+      // Status
+      if (filtros.status !== 'Todos') {
+        if (item.status !== filtros.status) return false;
+      }
+
+      // Data De
+      if (filtros.dataDe) {
+        if (!item.dataValidade || item.dataValidade < filtros.dataDe) {
+          return false;
+        }
+      }
+
+      // Data Ate
+      if (filtros.dataAte) {
+        if (!item.dataValidade || item.dataValidade > filtros.dataAte) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [seguros, filtros]);
+
+  // Ordenação
+  const handleOrdenar = (coluna) => {
+    if (colunaOrdenacao === coluna) {
+      setOrdemDirecao((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setColunaOrdenacao(coluna);
+      setOrdemDirecao('asc');
+    }
+  };
+
+  const dadosOrdenados = useMemo(() => {
+    const ordenados = [...dadosFiltrados];
+
+    const getStatusWeight = (status) => {
+      switch (status) {
+        case 'vencido': return 1;
+        case 'a_vencer': return 2;
+        case 'ativo': return 3;
+        case 'sem_registro': return 4;
+        default: return 5;
+      }
+    };
+
+    ordenados.sort((a, b) => {
+      if (colunaOrdenacao === 'status_padrao') {
+        // Ordenação padrão: Vencidos > A vencer > Ativos > Sem registro
+        const pesoA = getStatusWeight(a.status);
+        const pesoB = getStatusWeight(b.status);
+        if (pesoA !== pesoB) return pesoA - pesoB;
+
+        if (a.dataValidade && b.dataValidade) {
+          return a.dataValidade.localeCompare(b.dataValidade);
+        }
+        if (a.dataValidade) return -1;
+        if (b.dataValidade) return 1;
+        return a.condominio.localeCompare(b.condominio);
+      }
+
+      if (colunaOrdenacao === 'codigo') {
+        const valA = Number(a.codigo) || 0;
+        const valB = Number(b.codigo) || 0;
+        return ordemDirecao === 'asc' ? valA - valB : valB - valA;
+      }
+
+      if (colunaOrdenacao === 'condominio') {
+        return ordemDirecao === 'asc'
+          ? a.condominio.localeCompare(b.condominio)
+          : b.condominio.localeCompare(a.condominio);
+      }
+
+      if (colunaOrdenacao === 'seguradora') {
+        return ordemDirecao === 'asc'
+          ? a.seguradora.localeCompare(b.seguradora)
+          : b.seguradora.localeCompare(a.seguradora);
+      }
+
+      if (colunaOrdenacao === 'corretora') {
+        return ordemDirecao === 'asc'
+          ? a.corretora.localeCompare(b.corretora)
+          : b.corretora.localeCompare(a.corretora);
+      }
+
+      if (colunaOrdenacao === 'validade') {
+        const valA = a.dataValidade || '';
+        const valB = b.dataValidade || '';
+        if (!valA && !valB) return 0;
+        if (!valA) return 1;
+        if (!valB) return -1;
+        return ordemDirecao === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      }
+
+      if (colunaOrdenacao === 'status') {
+        const pesoA = getStatusWeight(a.status);
+        const pesoB = getStatusWeight(b.status);
+        return ordemDirecao === 'asc' ? pesoA - pesoB : pesoB - pesoA;
+      }
+
+      return 0;
+    });
+
+    return ordenados;
+  }, [dadosFiltrados, colunaOrdenacao, ordemDirecao]);
+
+  const drawerAbertoGeral = !!fichaCondominioId || drawerNovoEditarAberto;
+
   return (
-    <div className="sg-page">
-      <div className="sg-header">
-        <div className="sg-title-area">
-          <div className="sg-shield-icon">
-            <IcoSeguro />
-          </div>
-          <div>
-            <h1>Seguros</h1>
-            <p>Gestão e controle dos seguros dos condomínios.</p>
-          </div>
-        </div>
-        <button className="sg-btn-primary" onClick={() => setModalAtivo('novo')}>
-          <IcoPlus /> Novo seguro
-        </button>
-      </div>
-
-      <div className="sg-kpis">
-        <div className="sg-kpi-card" onClick={() => { limparFiltros(); }}>
-          <div className="sg-kpi-header">
-            <span className="sg-kpi-title">Total de condomínios</span>
-            <div className="sg-kpi-icon blue"><IcoCondominio /></div>
-          </div>
-          <div className="sg-kpi-value">{totalCondominios}</div>
-          <div className="sg-kpi-desc">Condomínios cadastrados</div>
-        </div>
-        <div className="sg-kpi-card" onClick={() => { setFiltroStatus('Ativo'); }}>
-          <div className="sg-kpi-header">
-            <span className="sg-kpi-title">Seguros ativos</span>
-            <div className="sg-kpi-icon green"><IcoCheck /></div>
-          </div>
-          <div className="sg-kpi-value">{segurosAtivos}</div>
-          <div className="sg-kpi-desc">{ativosPerc}% dos condomínios</div>
-        </div>
-        <div className="sg-kpi-card" onClick={() => { setFiltroStatus('Próximo a vencer'); }} style={{ border: filtroStatus === 'Próximo a vencer' ? '1px solid #d97706' : '' }}>
-          <div className="sg-kpi-header">
-            <span className="sg-kpi-title" style={{color: '#d97706'}}>Próximos a vencer</span>
-            <div className="sg-kpi-icon orange"><IcoRelogio /></div>
-          </div>
-          <div className="sg-kpi-value">{proximosAVencer}</div>
-          <div className="sg-kpi-desc">Nos próximos 30 dias</div>
-        </div>
-        <div className="sg-kpi-card" onClick={() => { setFiltroStatus('Vencido'); }} style={{ border: filtroStatus === 'Vencido' ? '1px solid #dc2626' : '' }}>
-          <div className="sg-kpi-header">
-            <span className="sg-kpi-title" style={{color: '#dc2626'}}>Seguros vencidos</span>
-            <div className="sg-kpi-icon red"><IcoVencido /></div>
-          </div>
-          <div className="sg-kpi-value">{segurosVencidos}</div>
-          <div className="sg-kpi-desc" style={{color: '#dc2626', fontWeight: 600}}>Requer atenção imediata</div>
-        </div>
-      </div>
-
-      <div className="sg-filters-card">
-        <div className="sg-filters-grid">
-          <div className="sg-filter-group" style={{ flexGrow: 1, minWidth: '240px' }}>
-            <label>Buscar condomínio</label>
-            <input 
-              className="sg-filter-input" 
-              placeholder="Digite o nome ou código"
-              value={filtroBusca} onChange={e => setFiltroBusca(e.target.value)} 
-            />
-          </div>
-          <div className="sg-filter-group">
-            <label>Seguradora</label>
-            <select className="sg-filter-input" value={filtroSeguradora} onChange={e => setFiltroSeguradora(e.target.value)}>
-              {seguradoras.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div className="sg-filter-group">
-            <label>Corretora</label>
-            <select className="sg-filter-input" value={filtroCorretora} onChange={e => setFiltroCorretora(e.target.value)}>
-              {corretoras.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div className="sg-filter-group">
-            <label>Gerente</label>
-            <select className="sg-filter-input" value={filtroGerente} onChange={e => setFiltroGerente(e.target.value)}>
-              {gerentes.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div className="sg-filter-group" style={{ display: 'flex', flexDirection: 'row', gap: '8px', minWidth: '280px', alignItems: 'flex-end' }}>
-             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label>Vencimento entre</label>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input type="date" className="sg-filter-input" style={{flex:1}} value={filtroVencimentoDe} onChange={e => setFiltroVencimentoDe(e.target.value)} />
-                  <span style={{color: '#64748b'}}>até</span>
-                  <input type="date" className="sg-filter-input" style={{flex:1}} value={filtroVencimentoAte} onChange={e => setFiltroVencimentoAte(e.target.value)} />
-                </div>
-             </div>
-          </div>
-          <div className="sg-filter-group">
-            <label>Status</label>
-            <select className="sg-filter-input" value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
-              <option value="Todos">Todos</option>
-              <option value="Ativo">Ativo</option>
-              <option value="Próximo a vencer">Próximo a vencer</option>
-              <option value="Vencido">Vencido</option>
-            </select>
-          </div>
-          <div className="sg-filter-group">
-            <button className="sg-btn-clear" onClick={limparFiltros}>
-              Limpar filtros
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="sg-table-card">
-        <div className="sg-table-responsive">
-          <table className="sg-table">
-            <thead>
-              <tr>
-                <th onClick={() => alternarOrdem('codigoCondominio')}>Código {ordemCol === 'codigoCondominio' && (ordemDir === 'asc' ? '↑' : '↓')}</th>
-                <th onClick={() => alternarOrdem('nomeCondominio')}>Condomínio {ordemCol === 'nomeCondominio' && (ordemDir === 'asc' ? '↑' : '↓')}</th>
-                <th onClick={() => alternarOrdem('seguradora')}>Seguradora {ordemCol === 'seguradora' && (ordemDir === 'asc' ? '↑' : '↓')}</th>
-                <th onClick={() => alternarOrdem('corretora')}>Corretora {ordemCol === 'corretora' && (ordemDir === 'asc' ? '↑' : '↓')}</th>
-                <th onClick={() => alternarOrdem('gerente')}>Gerente {ordemCol === 'gerente' && (ordemDir === 'asc' ? '↑' : '↓')}</th>
-                <th onClick={() => alternarOrdem('dataRenovacao')}>Data Renovação {ordemCol === 'dataRenovacao' && (ordemDir === 'asc' ? '↑' : '↓')}</th>
-                <th onClick={() => alternarOrdem('dataValidade')}>Data Validade {ordemCol === 'dataValidade' && (ordemDir === 'asc' ? '↑' : '↓')}</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dadosPaginados.length === 0 ? (
-                <tr>
-                  <td colSpan="9">
-                    <div className="sg-empty">
-                      <h3>Não encontramos seguros</h3>
-                      <p>Altere os filtros ou tente uma nova busca.</p>
-                      <button className="sg-btn-clear" style={{display: 'inline-flex', margin: '0 auto'}} onClick={limparFiltros}>Limpar filtros</button>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                dadosPaginados.map(s => (
-                  <tr key={s.id} className={renderRowClass(s.statusCalc)}>
-                    <td style={{fontWeight: 600}}>{s.codigoCondominio}</td>
-                    <td><strong>{s.nomeCondominio}</strong></td>
-                    <td>{s.seguradora}</td>
-                    <td>{s.corretora}</td>
-                    <td>{s.gerente}</td>
-                    <td>{formatarDataBr(s.dataRenovacao)}</td>
-                    <td>{formatarDataBr(s.dataValidade)}</td>
-                    <td>{renderBadge(s.statusCalc)}</td>
-                    <td>
-                      <div className="sg-actions">
-                        <button className="sg-btn-icon" onClick={() => { setSeguroSelecionado(s); setModalAtivo('visualizar'); }} title="Visualizar"><IcoEye /></button>
-                        <button className="sg-btn-icon" onClick={() => { setSeguroSelecionado(s); setModalAtivo('novo'); /* simula editar */ }} title="Editar"><IcoEdit /></button>
-                        <div style={{ position: 'relative' }}>
-                          <button className="sg-btn-icon" onClick={(e) => abrirMenuRow(e, s.id)}><IcoMore /></button>
-                          {menuAbertoId === s.id && (
-                            <div className="sg-dropdown-menu">
-                              <button className="sg-dropdown-item" onClick={() => { setSeguroSelecionado(s); setModalAtivo('visualizar'); }}>Visualizar seguro</button>
-                              <button className="sg-dropdown-item" onClick={() => { setSeguroSelecionado(s); setModalAtivo('novo'); }}>Editar seguro</button>
-                              <button className="sg-dropdown-item" onClick={() => { setSeguroSelecionado(s); setModalAtivo('renovar'); }}>Renovar seguro</button>
-                              <button className="sg-dropdown-item">Histórico</button>
-                              <button className="sg-dropdown-item danger" onClick={() => alert('Tem certeza que deseja excluir?')}>Excluir</button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        
-        {dadosFiltrados.length > 0 && (
-          <div className="sg-pagination">
-            <div className="sg-pag-info">
-              Mostrando {((pagAtualReal - 1) * itensPorPagina) + 1} a {Math.min(pagAtualReal * itensPorPagina, dadosOrdenados.length)} de {dadosOrdenados.length} registros
+    <div className="seg-layout">
+      <div className={`seg-content ${drawerAbertoGeral ? 'drawer-open' : ''}`}>
+        {/* Header */}
+        <div className="seg-header">
+          <div className="seg-title-area">
+            <div className="seg-title-icon">
+              <IcoSeguro />
             </div>
-            
-            <div className="sg-pag-controls">
-              <button className="sg-pag-btn" disabled={pagAtualReal === 1} onClick={() => setPaginaAtual(p => p - 1)}>Anterior</button>
-              
-              {/* Paginação Simplificada no mockup */}
-              <button className="sg-pag-btn active">{pagAtualReal}</button>
-              {pagAtualReal < totalPaginas && <button className="sg-pag-btn" onClick={() => setPaginaAtual(pagAtualReal + 1)}>{pagAtualReal + 1}</button>}
-              {totalPaginas > pagAtualReal + 1 && <span style={{color: '#64748b'}}>...</span>}
-              {totalPaginas > pagAtualReal + 1 && <button className="sg-pag-btn" onClick={() => setPaginaAtual(totalPaginas)}>{totalPaginas}</button>}
-              
-              <button className="sg-pag-btn" disabled={pagAtualReal === totalPaginas} onClick={() => setPaginaAtual(p => p + 1)}>Próxima</button>
+            <div>
+              <h1>Seguros</h1>
+              <p>Gestão e controle dos seguros dos condomínios.</p>
             </div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="sg-pag-info">Itens por página:</span>
-              <select className="sg-filter-input" style={{ width: '80px', padding: '6px' }} value={itensPorPagina} onChange={e => { setItensPorPagina(Number(e.target.value)); setPaginaAtual(1); }}>
-                <option value="10">10</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
-            </div>
+          </div>
+
+          <button type="button" className="seg-btn-primary" onClick={handleNovo}>
+            + Novo seguro
+          </button>
+        </div>
+
+        {erro && (
+          <div
+            style={{
+              background: '#fee2e2',
+              color: '#b91c1c',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              fontSize: '14px'
+            }}
+          >
+            {erro}
           </div>
         )}
+
+        {/* KPIs */}
+        <SegurosKpis kpis={kpisInteligentes}
+          filtroStatus={filtros.status}
+          onSelectStatus={(status) => handleFiltroChange('status', status)}
+        />
+
+        {/* Filters */}
+        <SegurosFilters
+          filtros={filtros}
+          onFiltroChange={handleFiltroChange}
+          onLimparFiltros={handleLimparFiltros}
+          seguradoras={seguradoras}
+          corretoras={corretoras}
+          gerentes={gerentes}
+        />
+
+        {/* Table */}
+        <SegurosTable
+          dados={dadosOrdenados}
+          carregando={carregando}
+          isAdmin={isAdmin}
+          onVisualizar={handleVisualizar}
+          onEditar={handleEditar}
+          onRenovar={handleRenovar}
+          onExcluir={handleExcluir}
+          paginaAtual={paginaAtual}
+          setPaginaAtual={setPaginaAtual}
+          itensPorPagina={itensPorPagina}
+          setItensPorPagina={setItensPorPagina}
+          colunaOrdenacao={colunaOrdenacao}
+          ordemDirecao={ordemDirecao}
+          onOrdenar={handleOrdenar}
+        />
       </div>
 
-      {/* Modal Mockups */}
-      {modalAtivo && (
-        <div className="sg-modal-overlay" onClick={() => setModalAtivo(null)}>
-          <div className="sg-modal" onClick={e => e.stopPropagation()}>
-            <div className="sg-modal-header">
-              <h2>{modalAtivo === 'novo' ? (seguroSelecionado ? 'Editar Seguro' : 'Novo Seguro') : modalAtivo === 'visualizar' ? 'Detalhes do Seguro' : 'Renovar Seguro'}</h2>
-              <button className="sg-modal-close" onClick={() => setModalAtivo(null)}>&times;</button>
-            </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-               <div className="sg-filter-group"><label>Condomínio</label><input className="sg-filter-input" defaultValue={seguroSelecionado?.nomeCondominio || ''} readOnly={modalAtivo === 'visualizar'}/></div>
-               <div className="sg-filter-group"><label>Número da Apólice</label><input className="sg-filter-input" defaultValue={seguroSelecionado?.numeroApolice || ''} readOnly={modalAtivo === 'visualizar'}/></div>
-               <div className="sg-filter-group"><label>Seguradora</label><input className="sg-filter-input" defaultValue={seguroSelecionado?.seguradora || ''} readOnly={modalAtivo === 'visualizar'}/></div>
-               <div className="sg-filter-group"><label>Corretora</label><input className="sg-filter-input" defaultValue={seguroSelecionado?.corretora || ''} readOnly={modalAtivo === 'visualizar'}/></div>
-               <div className="sg-filter-group"><label>Data Renovação</label><input type="date" className="sg-filter-input" defaultValue={seguroSelecionado?.dataRenovacao || ''} readOnly={modalAtivo === 'visualizar'}/></div>
-               <div className="sg-filter-group"><label>Data Validade</label><input type="date" className="sg-filter-input" defaultValue={seguroSelecionado?.dataValidade || ''} readOnly={modalAtivo === 'visualizar'}/></div>
-               
-               {modalAtivo !== 'visualizar' && (
-                  <div className="sg-filter-group" style={{ gridColumn: '1 / -1' }}>
-                    <label>Upload da Apólice (PDF)</label>
-                    <input type="file" className="sg-filter-input" accept=".pdf" />
-                  </div>
-               )}
-            </div>
+      {/* Drawer Ficha do Seguro */}
+      <SeguroFichaDrawer
+        aberto={!!fichaCondominioId}
+        condominioId={fichaCondominioId}
+        onFechar={() => setFichaCondominioId(null)}
+        onEditar={(ficha) => {
+          setFichaCondominioId(null);
+          handleEditar(ficha);
+        }}
+        onNotificar={mostrarToast}
+        podeEditarCadastrais={podeEditarCadastrais}
+      />
 
-            {modalAtivo === 'visualizar' && (
-               <div style={{ marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
-                 <h3 style={{ fontSize: '16px', margin: '0 0 12px' }}>Histórico</h3>
-                 <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 8px' }}>• {formatarDataBr(seguroSelecionado?.dataRenovacao)} - Seguro renovado.</p>
-                 <p style={{ fontSize: '14px', color: '#64748b', margin: '0' }}>• 01/01/2022 - Seguro cadastrado.</p>
-               </div>
-            )}
+      {/* Drawer Novo / Editar Seguro */}
+      <SeguroNovoEditarDrawer
+        aberto={drawerNovoEditarAberto}
+        onFechar={() => setDrawerNovoEditarAberto(false)}
+        seguroEditando={seguroEditando}
+        todosCondominios={seguros}
+        gerentes={gerentes}
+        onSalvar={handleSalvar}
+        podeEditarCadastrais={podeEditarCadastrais}
+      />
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
-              <button className="sg-btn-clear" onClick={() => setModalAtivo(null)}>Fechar</button>
-              {modalAtivo !== 'visualizar' && (
-                 <button className="sg-btn-primary" onClick={() => { alert('Ação simulada com sucesso!'); setModalAtivo(null); }}>Salvar</button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Toast Feedback */}
+      {toast && <div className="seg-toast">{toast}</div>}
     </div>
   );
 }

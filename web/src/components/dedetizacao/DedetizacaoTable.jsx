@@ -1,23 +1,58 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DedetizacaoStatusBadge } from './DedetizacaoComponents';
-import { IcoDoc, IcoSino, IcoEye, IcoEdit, IcoDots } from '../icons';
+import { IcoDoc, IcoSino, IcoEye, IcoEdit, IcoDots, IcoSort, IcoSortAsc, IcoSortDesc } from '../icons';
 
-export default function DedetizacaoTable({ data, onEdit }) {
+export default function DedetizacaoTable({
+  data,
+  onEdit,
+  onVisualizar,
+  colunaOrdenacao = 'codigo',
+  ordemDirecao = 'asc',
+  onOrdenar = () => {}
+}) {
+  const [menuAbertoId, setMenuAbertoId] = useState(null);
+
+  const toggleMenu = (e, id) => {
+    e.stopPropagation();
+    setMenuAbertoId(menuAbertoId === id ? null : id);
+  };
+
+  const renderSortIcon = (coluna) => {
+    if (colunaOrdenacao !== coluna) return <IcoSort />;
+    return ordemDirecao === 'asc' ? <IcoSortAsc /> : <IcoSortDesc />;
+  };
+
   return (
-    <div className="ded-table-card">
+    <div className="ded-table-card" onClick={() => setMenuAbertoId(null)}>
       <div className="ded-table-wrap">
         <table className="ded-table">
           <thead>
             <tr>
-              <th>Código</th>
-              <th>Condomínio</th>
-              <th>Empresa Executora</th>
-              <th>Data Agendada</th>
-              <th>Data Execução</th>
-              <th>Próxima Execução<br/><span style={{fontSize: '10px', color: '#94a3b8'}}>(Validade)</span></th>
-              <th>Status</th>
-              <th>Nota / Recibo</th>
-              <th>Ações</th>
+              <th className="sortable" style={{ width: '85px' }} onClick={() => onOrdenar('codigo')}>
+                Código {renderSortIcon('codigo')}
+              </th>
+              <th className="sortable" onClick={() => onOrdenar('condominio')}>
+                Condomínio {renderSortIcon('condominio')}
+              </th>
+              <th className="sortable" onClick={() => onOrdenar('empresa')}>
+                Empresa Executora {renderSortIcon('empresa')}
+              </th>
+              <th className="sortable" onClick={() => onOrdenar('dataAgendada')}>
+                Data Agendada {renderSortIcon('dataAgendada')}
+              </th>
+              <th className="sortable" onClick={() => onOrdenar('dataExecucao')}>
+                Data Execução {renderSortIcon('dataExecucao')}
+              </th>
+              <th className="sortable" onClick={() => onOrdenar('validade')}>
+                Próxima Execução<br/><span style={{fontSize: '10px', color: '#94a3b8'}}>(Validade)</span> {renderSortIcon('validade')}
+              </th>
+              <th className="sortable" onClick={() => onOrdenar('status')}>
+                Status {renderSortIcon('status')}
+              </th>
+              <th className="sortable" onClick={() => onOrdenar('nota')}>
+                Nota / Recibo {renderSortIcon('nota')}
+              </th>
+              <th style={{ textAlign: 'center', width: '100px' }}>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -40,16 +75,104 @@ export default function DedetizacaoTable({ data, onEdit }) {
                 </td>
                 <td>
                   {row.temNota ? (
-                    <div className="ded-nota ok"><IcoDoc /> Anexada</div>
+                    <div 
+                      className="ded-nota ok" 
+                      style={{ cursor: 'pointer' }} 
+                      onClick={() => onVisualizar(row)}
+                      title="Clique para ver o recibo"
+                    >
+                      <IcoDoc /> Anexada
+                    </div>
                   ) : (
                     <div className="ded-nota nok"><IcoSino /> Pendente</div>
                   )}
                 </td>
                 <td>
                   <div className="ded-actions">
-                    <button className="ded-btn-icon" title="Visualizar agendamento"><IcoEye /></button>
-                    <button className="ded-btn-icon" title="Registrar execução / Editar" onClick={() => onEdit(row)}><IcoEdit /></button>
-                    <button className="ded-btn-icon" title="Mais opções"><IcoDots /></button>
+                    <button 
+                      type="button" 
+                      className="ded-btn-icon" 
+                      title="Visualizar detalhes" 
+                      onClick={() => onVisualizar(row)}
+                    >
+                      <IcoEye />
+                    </button>
+                    <button 
+                      type="button" 
+                      className="ded-btn-icon" 
+                      title={row.agendamento_id ? "Editar agendamento / Registrar execução" : "Registrar execução / Agendar"} 
+                      onClick={() => onEdit(row, row.agendamento_id ? 'agendamento' : 'execucao')}
+                    >
+                      <IcoEdit />
+                    </button>
+                    <div style={{ position: 'relative' }}>
+                      <button 
+                        type="button" 
+                        className="ded-btn-icon" 
+                        title="Mais opções"
+                        onClick={(e) => toggleMenu(e, row.id)}
+                      >
+                        <IcoDots />
+                      </button>
+
+                      {menuAbertoId === row.id && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: '100%',
+                            background: 'white',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            zIndex: 20,
+                            minWidth: '180px',
+                            padding: '4px 0'
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 14px', border: 'none', background: 'none', fontSize: '13px', color: '#334155', cursor: 'pointer' }}
+                            onClick={() => { setMenuAbertoId(null); onVisualizar(row); }}
+                          >
+                            Visualizar detalhes
+                          </button>
+                          <button
+                            type="button"
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 14px', border: 'none', background: 'none', fontSize: '13px', color: '#2563eb', cursor: 'pointer' }}
+                            onClick={() => { setMenuAbertoId(null); onEdit(row, 'agendamento'); }}
+                          >
+                            {row.agendamento_id ? 'Editar agendamento' : 'Agendar visita'}
+                          </button>
+                          <button
+                            type="button"
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 14px', border: 'none', background: 'none', fontSize: '13px', color: '#334155', cursor: 'pointer' }}
+                            onClick={() => { setMenuAbertoId(null); onEdit(row, 'execucao'); }}
+                          >
+                            Registrar execução
+                          </button>
+                          {row.agendamento_id && (
+                            <button
+                              type="button"
+                              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 14px', border: 'none', background: 'none', fontSize: '13px', color: '#dc2626', cursor: 'pointer' }}
+                              onClick={() => { setMenuAbertoId(null); onEdit(row, 'agendamento'); }}
+                            >
+                              Cancelar agendamento...
+                            </button>
+                          )}
+                          {row.temNota && (
+                            <button
+                              type="button"
+                              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 14px', border: 'none', background: 'none', fontSize: '13px', color: '#16a34a', cursor: 'pointer' }}
+                              onClick={() => { setMenuAbertoId(null); onVisualizar(row); }}
+                            >
+                              Ver recibo / nota
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </td>
               </tr>

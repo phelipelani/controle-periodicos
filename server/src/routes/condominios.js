@@ -3,7 +3,7 @@ const db = require('../db');
 const { statusVencimento } = require('../vencimentos');
 const { registrarServico, periodicidadeEfetiva } = require('../estado');
 const { exigirAdmin } = require('../auth');
-const { filtroEscopo, podeAcessarCondominio } = require('../acesso');
+const { filtroEscopo, podeAcessarCondominio, podeAcessarServico, registrarAuditoria } = require('../acesso');
 
 const router = express.Router();
 
@@ -61,7 +61,7 @@ router.get('/', (req, res) => {
       FROM condominios c
       LEFT JOIN usuarios g ON g.id = c.gerente_id
       WHERE ${escopo.sql}
-      ORDER BY c.nome
+      ORDER BY c.id ASC
     `)
     .all(...escopo.params);
 
@@ -72,6 +72,7 @@ router.get('/', (req, res) => {
       statusGeral: statusGeral(servicos),
       vencidos: servicos.filter((s) => s.status === 'vencido').length,
       aVencer: servicos.filter((s) => s.status === 'a_vencer').length,
+      servicos
     };
   });
   res.json(resultado);
@@ -95,11 +96,11 @@ router.get('/:id', (req, res) => {
 
 // Cadastro/edição/remoção de condomínio: apenas admin (define o gerente).
 router.post('/', exigirAdmin, (req, res) => {
-  const { nome, endereco, observacoes, gerente_id } = req.body || {};
+  const { nome, endereco, observacoes, gerente_id, imagem } = req.body || {};
   if (!nome) return res.status(400).json({ erro: 'Nome do condomínio é obrigatório' });
   const info = db
-    .prepare('INSERT INTO condominios (nome, endereco, observacoes, gerente_id) VALUES (?, ?, ?, ?)')
-    .run(nome, endereco || null, observacoes || null, gerente_id || null);
+    .prepare('INSERT INTO condominios (nome, endereco, observacoes, gerente_id, imagem) VALUES (?, ?, ?, ?, ?)')
+    .run(nome, endereco || null, observacoes || null, gerente_id || null, imagem || null);
   res.status(201).json(db.prepare('SELECT * FROM condominios WHERE id = ?').get(info.lastInsertRowid));
 });
 
@@ -107,36 +108,51 @@ router.put('/:id', exigirAdmin, (req, res) => {
   const id = Number(req.params.id);
   const condominio = db.prepare('SELECT * FROM condominios WHERE id = ?').get(id);
   if (!condominio) return res.status(404).json({ erro: 'Condomínio não encontrado' });
-  const { nome, endereco, observacoes, gerente_id } = req.body || {};
+  const { nome, endereco, observacoes, gerente_id, imagem } = req.body || {};
   db.prepare(
-    'UPDATE condominios SET nome = ?, endereco = ?, observacoes = ?, gerente_id = ? WHERE id = ?'
+    'UPDATE condominios SET nome = ?, endereco = ?, observacoes = ?, gerente_id = ?, imagem = ? WHERE id = ?'
   ).run(
     nome ?? condominio.nome,
     endereco === undefined ? condominio.endereco : endereco,
     observacoes === undefined ? condominio.observacoes : observacoes,
     gerente_id === undefined ? condominio.gerente_id : (gerente_id || null),
+    imagem === undefined ? condominio.imagem : (imagem || null),
     id
   );
   res.json(db.prepare('SELECT * FROM condominios WHERE id = ?').get(id));
 });
 
 router.delete('/:id', exigirAdmin, (req, res) => {
-  db.prepare('DELETE FROM condominios WHERE id = ?').run(Number(req.params.id));
-  res.json({ ok: true });
+  const id = Number(req.params.id);
+  try {
+    const csIds = db.prepare('SELECT id FROM condominio_servicos WHERE condominio_id = ?').all(id).map(r => r.id);
+    if (csIds.length > 0) {
+      const placeholders = csIds.map(() => '?').join(',');
+      db.prepare(`DELETE FROM historico WHERE condominio_servico_id IN (${placeholders})`).run(...csIds);
+    }
+    db.prepare('DELETE FROM condominio_servicos WHERE condominio_id = ?').run(id);
+    db.prepare('DELETE FROM agendamentos WHERE condominio_id = ?').run(id);
+    db.prepare('DELETE FROM condominios WHERE id = ?').run(id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ erro: 'Falha ao excluir condomínio: ' + e.message });
+  }
 });
 
 // Registrar realização (periódico) ou data de validade (AVCB/seguro) de um serviço.
 router.put('/:id/servicos/:servicoId', (req, res) => {
   const condominioId = Number(req.params.id);
   const servicoId = Number(req.params.servicoId);
-  const { data, empresa, observacao } = req.body || {};
+  const { data, empresa, observacao, anexo } = req.body || {};
   if (!data) return res.status(400).json({ erro: 'Data é obrigatória' });
   if (!podeAcessarCondominio(req.usuario, condominioId)) {
     return res.status(403).json({ erro: 'Você não tem acesso a este condomínio' });
   }
 
-  const condominio = db.prepare('SELECT id FROM condominios WHERE id = ?').get(condominioId);
-  if (!condominio) return res.status(404).json({ erro: 'Condomínio não encontrado' });
+  const servico = db.prepare('SELECT chave FROM servicos WHERE id = ?').get(servicoId);
+  if (servico && !podeAcessarServico(req.usuario, servico.chave)) {
+    return res.status(403).json({ erro: 'Você não tem permissão para alterar este serviço.' });
+  }
 
   try {
     registrarServico({
@@ -147,11 +163,54 @@ router.put('/:id/servicos/:servicoId', (req, res) => {
       origem: 'manual',
       empresa: empresa || null,
       observacao: observacao || null,
+      anexo: anexo || null,
+    });
+
+    registrarAuditoria(req, 'REGISTRAR_SERVICO', 'condominio_servicos', servicoId, {
+      condominio_id: condominioId,
+      servico_id: servicoId,
+      servico_chave: servico?.chave,
+      data,
+      empresa,
+      tem_anexo: !!anexo
     });
   } catch (e) {
     return res.status(400).json({ erro: e.message });
   }
   res.json({ ...condominio, servicos: servicosDoCondominio(condominioId) });
+});
+
+// Rota específica para upload/anexo de recibo por empresa ou gerente
+router.put('/:id/servicos/:servicoId/recibo', (req, res) => {
+  const condominioId = Number(req.params.id);
+  const servicoId = Number(req.params.servicoId);
+  const { anexo } = req.body || {};
+
+  if (!podeAcessarCondominio(req.usuario, condominioId)) {
+    return res.status(403).json({ erro: 'Você não tem acesso a este condomínio' });
+  }
+
+  const servico = db.prepare('SELECT chave FROM servicos WHERE id = ?').get(servicoId);
+  if (servico && !podeAcessarServico(req.usuario, servico.chave)) {
+    return res.status(403).json({ erro: 'Você não tem permissão para alterar este serviço.' });
+  }
+
+  // Atualizar anexo no último histórico
+  const cs = db.prepare('SELECT id FROM condominio_servicos WHERE condominio_id = ? AND servico_id = ?').get(condominioId, servicoId);
+  if (cs) {
+    const ultHist = db.prepare('SELECT id FROM historico WHERE condominio_servico_id = ? ORDER BY id DESC LIMIT 1').get(cs.id);
+    if (ultHist) {
+      db.prepare('UPDATE historico SET anexo = ? WHERE id = ?').run(anexo || null, ultHist.id);
+    }
+  }
+
+  registrarAuditoria(req, 'ANEXAR_RECIBO', 'condominio_servicos', servicoId, {
+    condominio_id: condominioId,
+    servico_id: servicoId,
+    anexo
+  });
+
+  res.json({ ok: true, anexo });
 });
 
 module.exports = { router, servicosDoCondominio, statusGeral };

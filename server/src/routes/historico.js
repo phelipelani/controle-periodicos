@@ -29,4 +29,36 @@ router.get('/', (req, res) => {
   res.json(db.prepare(sql).all(...params));
 });
 
+// Histórico de alterações e auditoria do sistema
+router.get('/auditoria', (req, res) => {
+  const { entidade, entidade_id } = req.query;
+  const where = [];
+  const params = [];
+
+  if (entidade) {
+    where.push('entidade = ?');
+    params.push(entidade);
+  }
+  if (entidade_id) {
+    where.push('entidade_id = ?');
+    params.push(Number(entidade_id));
+  }
+
+  // Se for empresa, só vê os logs das ações feitas por ela
+  if (req.usuario?.papel === 'empresa') {
+    where.push('usuario_id = ?');
+    params.push(req.usuario.id);
+  }
+
+  const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+  const sql = `
+    SELECT * FROM auditoria
+    ${whereClause}
+    ORDER BY id DESC
+    LIMIT 100
+  `;
+
+  res.json(db.prepare(sql).all(...params));
+});
+
 module.exports = router;
