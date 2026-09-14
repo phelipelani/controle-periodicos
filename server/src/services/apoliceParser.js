@@ -302,13 +302,27 @@ function extrairCoberturas(texto, lmgPadrao) {
   return coberturasDetectadas;
 }
 
-/**
- * Função principal para processar o buffer do PDF da apólice
- */
 async function extrairDadosApolicePDF(pdfBuffer) {
   try {
-    const data = await pdfParse(pdfBuffer);
-    const textoBruto = data.text || '';
+    let textoBruto = '';
+    let paginasLidas = 1;
+
+    if (typeof pdfParse === 'function') {
+      const data = await pdfParse(pdfBuffer);
+      textoBruto = data.text || '';
+      paginasLidas = data.numpages || 1;
+    } else if (pdfParse?.PDFParse) {
+      const parser = new pdfParse.PDFParse({ data: pdfBuffer });
+      const textResult = await parser.getText();
+      textoBruto = textResult.text || (textResult.pages ? textResult.pages.map((p) => p.text).join('\n') : '');
+      paginasLidas = textResult.total || (textResult.pages ? textResult.pages.length : 1);
+      try {
+        await parser.destroy();
+      } catch (e) {}
+    } else {
+      throw new Error('Módulo de leitura de PDF indisponível.');
+    }
+
     const texto = cleanText(textoBruto);
 
     const seguradora = identificarSeguradora(texto);
@@ -333,7 +347,7 @@ async function extrairDadosApolicePDF(pdfBuffer) {
       cnpj: cnpj || null,
       endereco_local_segurado: endereco || null,
       coberturas,
-      paginasLidas: data.numpages || 1
+      paginasLidas: paginasLidas || 1
     };
   } catch (err) {
     console.error('[apoliceParser] Erro ao extrair PDF:', err);
