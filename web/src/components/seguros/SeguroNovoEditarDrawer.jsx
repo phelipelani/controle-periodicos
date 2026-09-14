@@ -56,14 +56,17 @@ export default function SeguroNovoEditarDrawer({
   // Form State - Cobertura por Unidade
   const [coberturaPorUnidade, setCoberturaPorUnidade] = useState(300000);
 
-  // Form State - Arquivos para upload (Apólice e Boletos)
   const [arquivoApolice, setArquivoApolice] = useState(null);
   const [arquivosBoletos, setArquivosBoletos] = useState([]);
   const [documentosExistentes, setDocumentosExistentes] = useState([]);
+  const [extraindoPDF, setExtraindoPDF] = useState(false);
+  const [sucessoExtracao, setSucessoExtracao] = useState('');
 
   useEffect(() => {
     if (aberto) {
       setErro('');
+      setSucessoExtracao('');
+      setExtraindoPDF(false);
       setAbaAtiva('apolice');
       setArquivoApolice(null);
       setArquivosBoletos([]);
@@ -282,6 +285,58 @@ export default function SeguroNovoEditarDrawer({
       }
     } catch (e) {
       // Ignora erro de requisição em modo novo
+    }
+  };
+
+  const handleUploadExtrairPDF = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setErro('Por favor, selecione um arquivo em formato PDF.');
+      return;
+    }
+
+    setExtraindoPDF(true);
+    setErro('');
+    setSucessoExtracao('');
+    setArquivoApolice(file);
+
+    try {
+      const formData = new FormData();
+      formData.append('apolice_pdf', file);
+
+      const token = localStorage.getItem('token') || '';
+      const res = await fetch('/api/seguros/extrair-pdf', {
+        method: 'POST',
+        headers: {
+          Authorization: token ? `Bearer ${token}` : ''
+        },
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.erro) {
+        throw new Error(data.erro || 'Falha ao extrair dados do PDF.');
+      }
+
+      if (data.seguradora) setSeguradora(data.seguradora);
+      if (data.corretora) setCorretora(data.corretora);
+      if (data.numero_apolice) setNumeroApolice(data.numero_apolice);
+      if (data.tipo_seguro) setTipoSeguro(data.tipo_seguro);
+      if (data.produto_ramo) setProdutoRamo(data.produto_ramo);
+      if (data.modalidade) setModalidade(data.modalidade);
+      if (data.limite_maximo_garantia) setLimiteMaximoGarantia(data.limite_maximo_garantia);
+      if (data.vigencia_inicio) setVigenciaInicio(data.vigencia_inicio);
+      if (data.vigencia_fim) setVigenciaFim(data.vigencia_fim);
+      if (data.endereco_local_segurado) setEnderecoLocalSegurado(data.endereco_local_segurado);
+      if (data.cnpj) setCnpj(data.cnpj);
+
+      setSucessoExtracao(`Apólice analisada com sucesso (${data.paginasLidas || 1} pág.)! Seguradora: ${data.seguradora || 'Detectada'}, Vigência: ${data.vigencia_inicio ? data.vigencia_inicio.split('-').reverse().join('/') : '—'} até ${data.vigencia_fim ? data.vigencia_fim.split('-').reverse().join('/') : '—'}.`);
+    } catch (err) {
+      setErro(err.message || 'Erro ao processar arquivo PDF da apólice.');
+    } finally {
+      setExtraindoPDF(false);
     }
   };
 
@@ -526,7 +581,89 @@ export default function SeguroNovoEditarDrawer({
           {/* 1. DADOS DO SEGURO */}
           {abaAtiva === 'apolice' && (
             <div className="seg-card-section">
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              {/* SMART PDF EXTRACTION BANNER */}
+              <div className="seg-smart-upload-banner">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '10px',
+                      background: 'linear-gradient(135deg, #D71920 0%, #b9151b 100%)',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px',
+                      boxShadow: '0 2px 6px rgba(215, 25, 32, 0.3)',
+                      flexShrink: 0
+                    }}>
+                      ⚡
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--seg-title-color, #0f172a)' }}>
+                        Preenchimento Automático via Apólice (PDF)
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--seg-muted-color, #64748b)' }}>
+                        Anexe o PDF da apólice para extrair seguradora, número, vigência e coberturas em 1 clique.
+                      </div>
+                    </div>
+                  </div>
+
+                  <label style={{
+                    background: extraindoPDF ? '#94a3b8' : '#D71920',
+                    color: '#ffffff',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: extraindoPDF ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 5px rgba(215, 25, 32, 0.25)',
+                    userSelect: 'none'
+                  }}>
+                    {extraindoPDF ? (
+                      <>
+                        <span style={{ width: '14px', height: '14px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'segSpin 0.8s linear infinite' }}></span>
+                        Lendo Apólice...
+                      </>
+                    ) : (
+                      <>
+                        <span>📄</span> Subir Apólice PDF
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={handleUploadExtrairPDF}
+                      disabled={extraindoPDF}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                </div>
+
+                {sucessoExtracao && (
+                  <div style={{
+                    background: '#ecfdf5',
+                    border: '1px solid #10b981',
+                    color: '#065f46',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <span>✅</span> {sucessoExtracao}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '4px' }}>
                 Dados da Apólice & Risco
               </div>
 

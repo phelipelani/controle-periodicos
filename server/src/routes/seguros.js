@@ -65,6 +65,25 @@ const storageSeguros = multer.diskStorage({
 });
 
 const uploadSeguros = multer({ storage: storageSeguros, limits: { fileSize: 25 * 1024 * 1024 } });
+const uploadMemoria = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
+const { extrairDadosApolicePDF } = require('../services/apoliceParser');
+
+// ============================================================
+// 0. POST /api/seguros/extrair-pdf - Leitura e parsing de apólice em PDF
+// ============================================================
+router.post('/extrair-pdf', uploadMemoria.single('apolice_pdf'), async (req, res) => {
+  try {
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ erro: 'Nenhum arquivo PDF fornecido para extração.' });
+    }
+
+    const resultado = await extrairDadosApolicePDF(req.file.buffer);
+    res.json(resultado);
+  } catch (err) {
+    console.error('[POST /extrair-pdf] Erro ao processar:', err);
+    res.status(500).json({ erro: err.message || 'Erro ao extrair informações da apólice.' });
+  }
+});
 
 // ============================================================
 // 1. GET /api/seguros - Listagem operacional + KPIs + Filtros
