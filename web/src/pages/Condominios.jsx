@@ -228,7 +228,14 @@ function FormCondominio({ condominio, gerentes, onSalvar, onExcluir, onFechar })
   const [form, setForm] = useState({
     id: condominio.id,
     nome: condominio.nome || '',
+    cnpj: condominio.cnpj || '',
+    quantidade_apartamentos: condominio.quantidade_apartamentos ?? '',
+    tipo: condominio.tipo || 'Vertical',
     endereco: condominio.endereco || '',
+    cidade: condominio.cidade || 'Caraguatatuba',
+    uf: condominio.uf || 'SP',
+    email: condominio.email || '',
+    telefone: condominio.telefone || '',
     gerente_id: condominio.gerente_id || '',
     observacoes: condominio.observacoes || '',
     imagem: condominio.imagem || ''
@@ -282,26 +289,82 @@ function FormCondominio({ condominio, gerentes, onSalvar, onExcluir, onFechar })
       </div>
 
       <div className="campo">
-        <label>Nome *</label>
+        <label>Nome do Condomínio *</label>
         <input value={form.nome} onChange={set('nome')} autoFocus />
       </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className="campo">
+          <label>Quantidade de Unidades / Apartamentos</label>
+          <input
+            type="number"
+            placeholder="Ex: 48"
+            value={form.quantidade_apartamentos}
+            onChange={set('quantidade_apartamentos')}
+          />
+        </div>
+        <div className="campo">
+          <label>CNPJ</label>
+          <input
+            type="text"
+            placeholder="00.000.000/0001-00"
+            value={form.cnpj}
+            onChange={set('cnpj')}
+          />
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className="campo">
+          <label>Tipo de Condomínio</label>
+          <select value={form.tipo} onChange={set('tipo')}>
+            <option value="Vertical">Vertical (Edifício / Prédio)</option>
+            <option value="Horizontal">Horizontal (Casas / Vilas)</option>
+          </select>
+        </div>
+        <div className="campo">
+          <label>Gerente Responsável</label>
+          <select value={form.gerente_id} onChange={set('gerente_id')}>
+            <option value="">Sem gerente</option>
+            {gerentes.map((g) => (
+              <option key={g.id} value={g.id}>{g.nome}{g.papel === 'admin' ? ' (admin)' : ''}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div className="campo">
         <label>Endereço</label>
-        <input value={form.endereco} onChange={set('endereco')} />
+        <input value={form.endereco} onChange={set('endereco')} placeholder="Rua, Número, Bairro" />
       </div>
-      <div className="campo">
-        <label>Gerente responsável</label>
-        <select value={form.gerente_id} onChange={set('gerente_id')}>
-          <option value="">Sem gerente</option>
-          {gerentes.map((g) => (
-            <option key={g.id} value={g.id}>{g.nome}{g.papel === 'admin' ? ' (admin)' : ''}</option>
-          ))}
-        </select>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+        <div className="campo">
+          <label>Cidade</label>
+          <input value={form.cidade} onChange={set('cidade')} placeholder="Caraguatatuba" />
+        </div>
+        <div className="campo">
+          <label>UF</label>
+          <input value={form.uf} onChange={set('uf')} placeholder="SP" />
+        </div>
       </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className="campo">
+          <label>E-mail</label>
+          <input type="email" value={form.email} onChange={set('email')} placeholder="contato@condominio.com" />
+        </div>
+        <div className="campo">
+          <label>Telefone</label>
+          <input value={form.telefone} onChange={set('telefone')} placeholder="(12) 99999-9999" />
+        </div>
+      </div>
+
       <div className="campo">
         <label>Observações</label>
         <textarea rows={3} value={form.observacoes} onChange={set('observacoes')} />
       </div>
+
       <div className="modal-acoes" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {form.id ? (
           <button type="button" className="secundario" style={{ color: '#dc2626', borderColor: '#fca5a5' }} onClick={() => onExcluir(form.id)}>

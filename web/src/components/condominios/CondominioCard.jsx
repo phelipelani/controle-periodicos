@@ -73,9 +73,14 @@ export default function CondominioCard({ condominio, onEdit }) {
             <p className="cond-card-address">
               <span className="cond-loc-ico">📍</span> {condominio.endereco || 'Endereço não informado'}
             </p>
-            <p className="cond-card-gerente">
-              <span className="cond-mgr-ico">👤</span> {condominio.gerente_nome || 'Sem gerente'} 
+            <p className="cond-card-gerente" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+              <span><span className="cond-mgr-ico">👤</span> {condominio.gerente_nome || 'Sem gerente'}</span>
               <span className="cond-badge-gerente">Gerente</span>
+              {condominio.quantidade_apartamentos ? (
+                <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                  🏢 {condominio.quantidade_apartamentos} {Number(condominio.quantidade_apartamentos) === 1 ? 'unidade' : 'unidades'}
+                </span>
+              ) : null}
             </p>
           </div>
         </div>

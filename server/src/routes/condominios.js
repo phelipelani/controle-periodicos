@@ -96,11 +96,57 @@ router.get('/:id', (req, res) => {
 
 // Cadastro/edição/remoção de condomínio: apenas admin (define o gerente).
 router.post('/', exigirAdmin, (req, res) => {
-  const { nome, endereco, observacoes, gerente_id, imagem } = req.body || {};
+  const {
+    nome,
+    endereco,
+    observacoes,
+    gerente_id,
+    imagem,
+    cnpj,
+    quantidade_apartamentos,
+    tipo,
+    tem_elevador,
+    tem_portao_automatico,
+    quantidade_funcionarios,
+    email,
+    telefone,
+    endereco_correspondencia,
+    bairro,
+    cep,
+    cidade,
+    uf
+  } = req.body || {};
   if (!nome) return res.status(400).json({ erro: 'Nome do condomínio é obrigatório' });
+
   const info = db
-    .prepare('INSERT INTO condominios (nome, endereco, observacoes, gerente_id, imagem) VALUES (?, ?, ?, ?, ?)')
-    .run(nome, endereco || null, observacoes || null, gerente_id || null, imagem || null);
+    .prepare(`
+      INSERT INTO condominios (
+        nome, endereco, observacoes, gerente_id, imagem,
+        cnpj, quantidade_apartamentos, tipo, tem_elevador, tem_portao_automatico,
+        quantidade_funcionarios, email, telefone, endereco_correspondencia,
+        bairro, cep, cidade, uf
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    .run(
+      nome,
+      endereco || null,
+      observacoes || null,
+      gerente_id || null,
+      imagem || null,
+      cnpj || null,
+      quantidade_apartamentos != null ? Number(quantidade_apartamentos) : 0,
+      tipo || 'Vertical',
+      tem_elevador !== undefined ? (tem_elevador ? 1 : 0) : 1,
+      tem_portao_automatico !== undefined ? (tem_portao_automatico ? 1 : 0) : 1,
+      quantidade_funcionarios != null ? Number(quantidade_funcionarios) : 0,
+      email || null,
+      telefone || null,
+      endereco_correspondencia || null,
+      bairro || null,
+      cep || null,
+      cidade || 'Caraguatatuba',
+      uf || 'SP'
+    );
   res.status(201).json(db.prepare('SELECT * FROM condominios WHERE id = ?').get(info.lastInsertRowid));
 });
 
@@ -108,15 +154,67 @@ router.put('/:id', exigirAdmin, (req, res) => {
   const id = Number(req.params.id);
   const condominio = db.prepare('SELECT * FROM condominios WHERE id = ?').get(id);
   if (!condominio) return res.status(404).json({ erro: 'Condomínio não encontrado' });
-  const { nome, endereco, observacoes, gerente_id, imagem } = req.body || {};
-  db.prepare(
-    'UPDATE condominios SET nome = ?, endereco = ?, observacoes = ?, gerente_id = ?, imagem = ? WHERE id = ?'
-  ).run(
+  const {
+    nome,
+    endereco,
+    observacoes,
+    gerente_id,
+    imagem,
+    cnpj,
+    quantidade_apartamentos,
+    tipo,
+    tem_elevador,
+    tem_portao_automatico,
+    quantidade_funcionarios,
+    email,
+    telefone,
+    endereco_correspondencia,
+    bairro,
+    cep,
+    cidade,
+    uf
+  } = req.body || {};
+
+  db.prepare(`
+    UPDATE condominios
+    SET nome = ?,
+        endereco = ?,
+        observacoes = ?,
+        gerente_id = ?,
+        imagem = ?,
+        cnpj = ?,
+        quantidade_apartamentos = ?,
+        tipo = ?,
+        tem_elevador = ?,
+        tem_portao_automatico = ?,
+        quantidade_funcionarios = ?,
+        email = ?,
+        telefone = ?,
+        endereco_correspondencia = ?,
+        bairro = ?,
+        cep = ?,
+        cidade = ?,
+        uf = ?
+    WHERE id = ?
+  `).run(
     nome ?? condominio.nome,
-    endereco === undefined ? condominio.endereco : endereco,
-    observacoes === undefined ? condominio.observacoes : observacoes,
+    endereco === undefined ? condominio.endereco : (endereco || null),
+    observacoes === undefined ? condominio.observacoes : (observacoes || null),
     gerente_id === undefined ? condominio.gerente_id : (gerente_id || null),
     imagem === undefined ? condominio.imagem : (imagem || null),
+    cnpj === undefined ? condominio.cnpj : (cnpj || null),
+    quantidade_apartamentos === undefined ? condominio.quantidade_apartamentos : (quantidade_apartamentos != null ? Number(quantidade_apartamentos) : 0),
+    tipo === undefined ? condominio.tipo : (tipo || 'Vertical'),
+    tem_elevador === undefined ? condominio.tem_elevador : (tem_elevador ? 1 : 0),
+    tem_portao_automatico === undefined ? condominio.tem_portao_automatico : (tem_portao_automatico ? 1 : 0),
+    quantidade_funcionarios === undefined ? condominio.quantidade_funcionarios : (Number(quantidade_funcionarios) || 0),
+    email === undefined ? condominio.email : (email || null),
+    telefone === undefined ? condominio.telefone : (telefone || null),
+    endereco_correspondencia === undefined ? condominio.endereco_correspondencia : (endereco_correspondencia || null),
+    bairro === undefined ? condominio.bairro : (bairro || null),
+    cep === undefined ? condominio.cep : (cep || null),
+    cidade === undefined ? condominio.cidade : (cidade || 'Caraguatatuba'),
+    uf === undefined ? condominio.uf : (uf || 'SP'),
     id
   );
   res.json(db.prepare('SELECT * FROM condominios WHERE id = ?').get(id));

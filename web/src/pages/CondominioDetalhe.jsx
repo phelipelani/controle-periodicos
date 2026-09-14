@@ -37,7 +37,10 @@ export default function CondominioDetalhe() {
       <h1>{condominio.nome}</h1>
       <p className="sub">
         {condominio.endereco || 'Sem endereço cadastrado'}
+        {condominio.cidade && <> — {condominio.cidade}/{condominio.uf || 'SP'}</>}
         {condominio.gerente_nome && <> · Gerente: <strong>{condominio.gerente_nome}</strong></>}
+        {condominio.quantidade_apartamentos ? <> · Unidades: <strong>{condominio.quantidade_apartamentos}</strong></> : null}
+        {condominio.cnpj && <> · CNPJ: <strong>{condominio.cnpj}</strong></>}
       </p>
 
       {/* Resumo visível: última realização / validade de cada serviço */}

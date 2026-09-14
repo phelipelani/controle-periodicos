@@ -94,7 +94,7 @@ export default function SeguroNovoEditarDrawer({
           setCep(condLocal.cep || '');
           setCidade(condLocal.cidade || 'Caraguatatuba');
           setUf(condLocal.uf || 'SP');
-          setQtdApartamentos(condLocal.quantidadeApartamentos || 10);
+          setQtdApartamentos(condLocal.quantidadeApartamentos ?? condLocal.quantidade_apartamentos ?? 0);
           setTipoCondominio(condLocal.tipo || 'Vertical');
           setTemElevador(condLocal.temElevador !== false);
           setTemPortaoAutomatico(condLocal.temPortaoAutomatico !== false);
@@ -123,7 +123,7 @@ export default function SeguroNovoEditarDrawer({
                 setCep(c.cep || '');
                 setCidade(c.cidade || 'Caraguatatuba');
                 setUf(c.uf || 'SP');
-                setQtdApartamentos(c.quantidadeApartamentos || 10);
+                setQtdApartamentos(c.quantidadeApartamentos ?? c.quantidade_apartamentos ?? 0);
                 setTipoCondominio(c.tipo || 'Vertical');
                 setTemElevador(c.temElevador !== false);
                 setTemPortaoAutomatico(c.temPortaoAutomatico !== false);
@@ -235,7 +235,7 @@ export default function SeguroNovoEditarDrawer({
       setCep(condLocal.cep || '');
       setCidade(condLocal.cidade || 'Caraguatatuba');
       setUf(condLocal.uf || 'SP');
-      setQtdApartamentos(condLocal.quantidadeApartamentos || 10);
+      setQtdApartamentos(condLocal.quantidadeApartamentos ?? condLocal.quantidade_apartamentos ?? 0);
       setTipoCondominio(condLocal.tipo || 'Vertical');
       setTemElevador(condLocal.temElevador !== false);
       setTemPortaoAutomatico(condLocal.temPortaoAutomatico !== false);
@@ -256,7 +256,7 @@ export default function SeguroNovoEditarDrawer({
         setCep(c.cep || '');
         setCidade(c.cidade || 'Caraguatatuba');
         setUf(c.uf || 'SP');
-        setQtdApartamentos(c.quantidadeApartamentos || 10);
+        setQtdApartamentos(c.quantidadeApartamentos ?? c.quantidade_apartamentos ?? 0);
         setTipoCondominio(c.tipo || 'Vertical');
         setTemElevador(c.temElevador !== false);
         setTemPortaoAutomatico(c.temPortaoAutomatico !== false);
