@@ -522,7 +522,7 @@ export default function SeguroFichaDrawer({
                   </div>
                 </div>
 
-                {/* 4° SEÇÃO: DOCUMENTOS & BOLETOS DA APÓLICE (ARMAZENAMENTO EM NUVEM adm/seguros/[ano]/[cod]) */}
+                {/* 4° SEÇÃO: DOCUMENTOS & BOLETOS DA APÓLICE (ARMAZENAMENTO EM NUVEM CONDOMÍNIOS/SEGUROS/[ano]/[cod]) */}
                 <div className="seg-card-section" style={{ border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                   <div className="seg-card-header" style={{ flexWrap: 'wrap', gap: '8px' }}>
                     <div>
@@ -530,7 +530,7 @@ export default function SeguroFichaDrawer({
                         <span style={{ fontSize: '18px' }}>📂</span> 4° DOCUMENTOS & BOLETOS DA APÓLICE ({documentos.length})
                       </div>
                       <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                        Nuvem: <code style={{ background: '#f1f5f9', padding: '2px 5px', borderRadius: '4px', color: '#0369a1' }}>adm/seguros/{anoDoc}/{String(cond.codigo || cond.id).padStart(3, '0')}/</code>
+                        Nuvem: <code style={{ background: '#f1f5f9', padding: '2px 5px', borderRadius: '4px', color: '#0369a1' }}>CONDOMÍNIOS/SEGUROS/{anoDoc}/{String(cond.codigo || cond.id).padStart(3, '0')}/</code>
                       </div>
                     </div>
 

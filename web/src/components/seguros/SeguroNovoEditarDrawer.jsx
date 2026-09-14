@@ -910,7 +910,7 @@ export default function SeguroNovoEditarDrawer({
                   onChange={(e) => setArquivoApolice(e.target.files[0] || null)}
                 />
                 <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-                  O arquivo será salvo automaticamente na estrutura oficial: <code>adm/seguros/[ano]/[codigo_condominio]/</code>
+                  O arquivo será salvo automaticamente na estrutura oficial: <code>CONDOMÍNIOS/SEGUROS/[ano]/[codigo_condominio]/</code>
                 </div>
               </div>
             </div>
@@ -923,7 +923,7 @@ export default function SeguroNovoEditarDrawer({
                 📂 Anexar Apólice, Boletos e Propostas
               </div>
               <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
-                Estrutura de nuvem: <code style={{ background: '#f1f5f9', padding: '2px 5px', borderRadius: '4px', color: '#0369a1' }}>adm/seguros/{vigenciaFim ? vigenciaFim.split('-')[0] : '2026'}/{String(condominioId || '001').padStart(3, '0')}/</code>
+                Estrutura de nuvem: <code style={{ background: '#f1f5f9', padding: '2px 5px', borderRadius: '4px', color: '#0369a1' }}>CONDOMÍNIOS/SEGUROS/{vigenciaFim ? vigenciaFim.split('-')[0] : '2026'}/{String(condominioId || '001').padStart(3, '0')}/</code>
               </p>
 
               {/* Upload Apólice */}

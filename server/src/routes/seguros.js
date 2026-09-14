@@ -33,11 +33,22 @@ function calcularStatusSeguro(dataValidade) {
   return { status: 'ativo', diasRestantes };
 }
 
-// Configuração de armazenamento organizado em nuvem/disco:
-// adm/seguros/[ano]/[codigo_condominio]/[arquivo]
+// Configuração de armazenamento oficial na nuvem (OneDrive):
+// CONDOMÍNIOS/SEGUROS/[ano]/[codigo_condominio]/[arquivo]
+const NUVEM_CONDOMINIOS_DIR =
+  process.env.NUVEM_DIR ||
+  'C:\\Users\\lesco\\OneDrive - IMCosta Administradora\\Arquivos de Leandro Costa - IMCosta - IMCosta Files\\CONDOMÍNIOS';
+
 function getStoragePathSeguros(ano, codigoCondominio) {
-  const dataDir = process.env.DB_DIR || path.join(__dirname, '../../data');
-  const dir = path.join(dataDir, 'adm', 'seguros', String(ano), String(codigoCondominio).padStart(3, '0'));
+  let baseDir = '';
+  if (fs.existsSync(NUVEM_CONDOMINIOS_DIR)) {
+    baseDir = path.join(NUVEM_CONDOMINIOS_DIR, 'SEGUROS');
+  } else {
+    const dataDir = process.env.DB_DIR || path.join(__dirname, '../../data');
+    baseDir = path.join(dataDir, 'adm', 'seguros');
+  }
+
+  const dir = path.join(baseDir, String(ano), String(codigoCondominio).padStart(3, '0'));
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
