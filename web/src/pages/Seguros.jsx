@@ -35,7 +35,7 @@ export default function Seguros() {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [itensPorPagina, setItensPorPagina] = useState(15);
 
-  const [colunaOrdenacao, setColunaOrdenacao] = useState('status_padrao');
+  const [colunaOrdenacao, setColunaOrdenacao] = useState('codigo');
   const [ordemDirecao, setOrdemDirecao] = useState('asc');
 
   // Drawers
