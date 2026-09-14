@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../../api';
+import { api, getToken } from '../../api';
 import { IcoUpload, IcoEye, IcoDownload, IcoTrash, IcoCloud } from '../icons';
 
 export default function SeguroNovoEditarDrawer({
@@ -288,16 +288,27 @@ export default function SeguroNovoEditarDrawer({
     }
   };
 
-  const handleUploadExtrairPDF = async (e) => {
-    const file = e.target.files?.[0];
+  const [arrastando, setArrastando] = useState(false);
+
+  const handleUploadExtrairPDF = async (inputOrEvent) => {
+    let file = null;
+    if (inputOrEvent instanceof File) {
+      file = inputOrEvent;
+    } else if (inputOrEvent?.target?.files?.[0]) {
+      file = inputOrEvent.target.files[0];
+    } else if (inputOrEvent?.dataTransfer?.files?.[0]) {
+      file = inputOrEvent.dataTransfer.files[0];
+    }
+
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setErro('Por favor, selecione um arquivo em formato PDF.');
+      setErro('Por favor, selecione ou arraste um arquivo em formato PDF.');
       return;
     }
 
     setExtraindoPDF(true);
+    setArrastando(false);
     setErro('');
     setSucessoExtracao('');
     setArquivoApolice(file);
@@ -306,11 +317,11 @@ export default function SeguroNovoEditarDrawer({
       const formData = new FormData();
       formData.append('apolice_pdf', file);
 
-      const token = localStorage.getItem('token') || '';
+      const token = getToken() || '';
       const res = await fetch('/api/seguros/extrair-pdf', {
         method: 'POST',
         headers: {
-          Authorization: token ? `Bearer ${token}` : ''
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
         body: formData
       });
@@ -337,6 +348,28 @@ export default function SeguroNovoEditarDrawer({
       setErro(err.message || 'Erro ao processar arquivo PDF da apólice.');
     } finally {
       setExtraindoPDF(false);
+      setArrastando(false);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setArrastando(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setArrastando(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setArrastando(false);
+    if (e.dataTransfer?.files?.[0]) {
+      handleUploadExtrairPDF(e.dataTransfer.files[0]);
     }
   };
 
@@ -469,10 +502,11 @@ export default function SeguroNovoEditarDrawer({
         formData.append('ano', String(anoUpload));
         formData.append('codigo_condominio', String(targetCondId).padStart(3, '0'));
 
+        const token = getToken() || '';
         await fetch(`/api/seguros/${targetCondId}/documentos`, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token') || ''}`
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
           },
           body: formData
         });
@@ -480,6 +514,7 @@ export default function SeguroNovoEditarDrawer({
 
       // Upload de boletos caso selecionados
       if (arquivosBoletos && arquivosBoletos.length > 0) {
+        const token = getToken() || '';
         for (const file of arquivosBoletos) {
           const formData = new FormData();
           formData.append('documento', file);
@@ -490,7 +525,7 @@ export default function SeguroNovoEditarDrawer({
           await fetch(`/api/seguros/${targetCondId}/documentos`, {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${localStorage.getItem('token') || ''}`
+              ...(token ? { Authorization: `Bearer ${token}` } : {})
             },
             body: formData
           });
@@ -582,7 +617,18 @@ export default function SeguroNovoEditarDrawer({
           {abaAtiva === 'apolice' && (
             <div className="seg-card-section">
               {/* SMART PDF EXTRACTION BANNER */}
-              <div className="seg-smart-upload-banner">
+              <div
+                className={`seg-smart-upload-banner ${arrastando ? 'dragging' : ''}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                style={{
+                  border: arrastando ? '2px dashed #D71920' : undefined,
+                  background: arrastando ? 'rgba(215, 25, 32, 0.12)' : undefined,
+                  transform: arrastando ? 'scale(1.01)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
@@ -602,10 +648,10 @@ export default function SeguroNovoEditarDrawer({
                     </div>
                     <div>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--seg-title-color, #0f172a)' }}>
-                        Preenchimento Automático via Apólice (PDF)
+                        {arrastando ? 'Solte o arquivo PDF aqui!' : 'Preenchimento Automático via Apólice (PDF)'}
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--seg-muted-color, #64748b)' }}>
-                        Anexe o PDF da apólice para extrair seguradora, número, vigência e coberturas em 1 clique.
+                        Arraste ou anexe o PDF da apólice para extrair seguradora, número, vigência e coberturas em 1 clique.
                       </div>
                     </div>
                   </div>
