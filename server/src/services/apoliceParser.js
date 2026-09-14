@@ -60,7 +60,37 @@ function identificarSeguradora(texto) {
   if (upper.includes('ZURICH')) {
     return 'Zurich Seguros';
   }
-  return 'Allianz Seguros'; // Padrão
+  if (upper.includes('LIBERTY') || upper.includes('YELUM')) {
+    return 'Yelum Seguros';
+  }
+  return 'Allianz Seguros';
+}
+
+/**
+ * Identifica a corretora a partir do texto.
+ * Regra: Se a apólice contiver SETOR SEGUROS / SETOR CORRETORA, é 'Setor Seguros'.
+ * Qualquer outro corretor (Ítalo, Direto, etc.) é classificado como 'Síndico'.
+ */
+function identificarCorretora(texto) {
+  const upper = texto.toUpperCase();
+  
+  // Procura por seção de corretor no texto
+  const idxCorretor = upper.search(/(?:CORRETOR|CORRETORA|INTERMEDI[AÁ]RIO|DADOS\s+DO\s+CORRETOR)/i);
+  if (idxCorretor !== -1) {
+    const trechoCorretor = upper.slice(idxCorretor, idxCorretor + 400);
+    if (trechoCorretor.includes('SETOR') || trechoCorretor.includes('SETOR SEGUROS') || trechoCorretor.includes('SETOR CORRETORA')) {
+      return 'Setor Seguros';
+    }
+    return 'Síndico';
+  }
+
+  // Busca global por Setor Seguros
+  if (upper.includes('SETOR SEGUROS') || upper.includes('SETOR CORRETORA') || upper.includes('SETOR CONSULTORIA')) {
+    return 'Setor Seguros';
+  }
+
+  // Padrão para terceiros / outros corretores
+  return 'Síndico';
 }
 
 /**
@@ -78,7 +108,7 @@ function extrairNumeroApolice(texto) {
     const match = texto.match(reg);
     if (match && match[1]) {
       const num = match[1].trim();
-      if (!['DO', 'DE', 'DA', 'EMITIDA', 'NOVA', 'DIGITAL', 'SEGUROS'].includes(num.toUpperCase())) {
+      if (!['DO', 'DE', 'DA', 'EMITIDA', 'NOVA', 'DIGITAL', 'SEGUROS', 'CONDOMÍNIO', 'CONDOMINIO'].includes(num.toUpperCase())) {
         return num;
       }
     }
@@ -88,21 +118,41 @@ function extrairNumeroApolice(texto) {
 
 /**
  * Extrai as datas de vigência (início e fim)
+ * Suporta formatos:
+ * - "Vigência: das 24H de 17/12/2025 às 24H de 17/12/2026"
+ * - "Vigência: 17/12/2025 a 17/12/2026"
+ * - "Início da vigência: 17/12/2025 Término: 17/12/2026"
  */
 function extrairVigencia(texto) {
   let inicio = null;
   let fim = null;
 
-  const vigenciaRangeRegex = /(?:Vig[eê]ncia|VIG[EÊ]NCIA|Per[ií]odo\s*de\s*Vig[eê]ncia)[^\d\n\r]*(\d{2})[\/\.](\d{2})[\/\.](\d{4})[^\d\n\r]*(\d{2})[\/\.](\d{2})[\/\.](\d{4})/i;
-  const matchRange = texto.match(vigenciaRangeRegex);
-  if (matchRange) {
-    inicio = formatarDataISO(matchRange[1], matchRange[2], matchRange[3]);
-    fim = formatarDataISO(matchRange[4], matchRange[5], matchRange[6]);
-    return { inicio, fim };
+  // 1. Linha de vigência com 2 datas (ex: "Vigência: das 24H de 17/12/2025 às 24H de 17/12/2026")
+  const regexLinhaVigencia = /(?:Vig[eê]ncia|Per[ií]odo\s*de\s*Vig[eê]ncia)[^\n\r]*?(\d{2})[\/\.](\d{2})[\/\.](\d{4})[^\n\r]*?(\d{2})[\/\.](\d{2})[\/\.](\d{4})/i;
+  const matchLinha = texto.match(regexLinhaVigencia);
+  if (matchLinha) {
+    return {
+      inicio: formatarDataISO(matchLinha[1], matchLinha[2], matchLinha[3]),
+      fim: formatarDataISO(matchLinha[4], matchLinha[5], matchLinha[6])
+    };
   }
 
-  const inicioRegex = /(?:In[ií]cio\s*(?:da|de)?\s*Vig[eê]ncia|Das\s*24h00?\s*(?:de|do\s*dia)?)\s*[:.]?\s*(\d{2})[\/\.](\d{2})[\/\.](\d{4})/i;
-  const fimRegex = /(?:Fim\s*(?:da|de)?\s*Vig[eê]ncia|T[eé]rmino\s*(?:da|de)?\s*Vig[eê]ncia|[Àa]s\s*24h00?\s*(?:de|do\s*dia)?|Validade)\s*[:.]?\s*(\d{2})[\/\.](\d{2})[\/\.](\d{4})/i;
+  // 2. Procura datas próximas da palavra "vigência"
+  const idxVig = texto.search(/vig[eê]ncia/i);
+  if (idxVig !== -1) {
+    const trecho = texto.slice(idxVig, idxVig + 250);
+    const datasTrecho = [...trecho.matchAll(/(\d{2})[\/\.](\d{2})[\/\.](\d{4})/g)];
+    if (datasTrecho.length >= 2) {
+      return {
+        inicio: formatarDataISO(datasTrecho[0][1], datasTrecho[0][2], datasTrecho[0][3]),
+        fim: formatarDataISO(datasTrecho[1][1], datasTrecho[1][2], datasTrecho[1][3])
+      };
+    }
+  }
+
+  // 3. Fallback de expressões isoladas de início e fim
+  const inicioRegex = /(?:In[ií]cio\s*(?:da|de)?\s*Vig[eê]ncia|Das\s*24h[0-9]*\s*(?:de|do\s*dia)?)[^\d\n\r]*(\d{2})[\/\.](\d{2})[\/\.](\d{4})/i;
+  const fimRegex = /(?:Fim\s*(?:da|de)?\s*Vig[eê]ncia|T[eé]rmino\s*(?:da|de)?\s*Vig[eê]ncia|[Àa]s\s*24h[0-9]*\s*(?:de|do\s*dia)?|Validade)[^\d\n\r]*(\d{2})[\/\.](\d{2})[\/\.](\d{4})/i;
 
   const matchInicio = texto.match(inicioRegex);
   if (matchInicio) {
@@ -121,6 +171,14 @@ function extrairVigencia(texto) {
  * Extrai CNPJ do segurado
  */
 function extrairCNPJ(texto) {
+  // Se houver seção de Segurado, buscar o CNPJ dessa seção
+  const idxSegurado = texto.search(/(?:SEGURADO|DADOS\s+DO\s+SEGURADO|ESTIPULANTE|TOMADOR)/i);
+  if (idxSegurado !== -1) {
+    const trecho = texto.slice(idxSegurado, idxSegurado + 300);
+    const m = trecho.match(/\b(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\b/);
+    if (m) return m[1];
+  }
+
   const cnpjRegex = /\b(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\b/;
   const match = texto.match(cnpjRegex);
   return match ? match[1] : '';
@@ -131,15 +189,17 @@ function extrairCNPJ(texto) {
  */
 function extrairEndereco(texto) {
   const regexes = [
-    /(?:Local\s*do\s*Risco|Endere[çc]o\s*do\s*Local\s*Segurado|Endere[çc]o\s*do\s*Risco|Local\s*Segurado)\s*[:.]?\s*([^\n\r]{10,120})/i,
-    /(?:Endere[çc]o|Logradouro)\s*[:.]?\s*([^\n\r]{10,120})/i
+    /Endere[çc]o\s*do\s*local\s*segurado\s*:\s*([^\n\r]+)/i,
+    /(?:Local\s*do\s*Risco|Endere[çc]o\s*do\s*Risco|Local\s*Segurado)\s*[:.]?\s*([^\n\r]+)/i,
+    /Logradouro\s*[:.]?\s*([^\n\r]+)/i
   ];
 
   for (const reg of regexes) {
     const match = texto.match(reg);
     if (match && match[1]) {
-      const end = match[1].trim().replace(/\s+/g, ' ');
-      if (end.length > 5 && !end.toUpperCase().includes('CNPJ') && !end.toUpperCase().includes('APÓLICE')) {
+      let end = match[1].trim().replace(/\s+/g, ' ');
+      end = end.replace(/[\s-]+$/, '');
+      if (end.length > 5 && !end.toUpperCase().startsWith('CNPJ') && !end.toUpperCase().startsWith('APÓLICE')) {
         return end;
       }
     }
@@ -152,7 +212,8 @@ function extrairEndereco(texto) {
  */
 function extrairLMG(texto) {
   const regexes = [
-    /(?:Limite\s*M[aá]ximo\s*de\s*Garantia|L\.?M\.?G\.?|Import[aâ]ncia\s*Segurada\s*Total|Valor\s*Total\s*Segurado)\s*[:.]?\s*R?\$?\s*([\d\.,]{5,20})/i,
+    /Limite\s*M[aá]ximo\s*de\s*Garantia\s*(?:da\s*Ap[oó]lice)?\s*[:.]?\s*R?\$?\s*([\d\.,]{5,20})/i,
+    /(?:L\.?M\.?G\.?|Import[aâ]ncia\s*Segurada\s*Total|Valor\s*Total\s*Segurado)\s*[:.]?\s*R?\$?\s*([\d\.,]{5,20})/i,
     /(?:B[aá]sica\s*[-–]\s*Inc[eê]ndio|Inc[eê]ndio[^\n\r]*Explos[aã]o)[^\d\n\r]*R?\$?\s*([\d\.,]{5,20})/i
   ];
 
@@ -178,6 +239,134 @@ function extrairLMG(texto) {
   }
 
   return 5000000;
+}
+
+/**
+ * Extrai Quantidade de Elevadores e se tem elevador
+ */
+function extrairElevadores(texto) {
+  const match = texto.match(/Quantidade\s*de\s*elevadores\s*:\s*([^\n\r]+)/i);
+  if (match) {
+    const val = match[1].trim().toUpperCase();
+    if (val.includes('SEM') || val.includes('NÃO') || val.includes('NAO') || val === '0' || val.includes('ZERO')) {
+      return { quantidade: 0, temElevador: false };
+    }
+    const num = parseInt(val.replace(/\D/g, ''), 10);
+    if (!isNaN(num)) {
+      return { quantidade: num, temElevador: num > 0 };
+    }
+  }
+
+  if (texto.match(/Sem\s*Elevador/i)) {
+    return { quantidade: 0, temElevador: false };
+  }
+
+  return { quantidade: 0, temElevador: false };
+}
+
+/**
+ * Extrai Quantidade de Andares
+ */
+function extrairAndares(texto) {
+  const match = texto.match(/Quantidade\s*de\s*Andares\s*:\s*([^\n\r]+)/i);
+  if (match) {
+    return match[1].trim();
+  }
+  return '6 a 10 Andares';
+}
+
+/**
+ * Extrai Quantidade de Blocos
+ */
+function extrairBlocos(texto) {
+  const match = texto.match(/Quantidade\s*de\s*Blocos[^\n\r:]*:\s*(\d+)/i);
+  if (match) {
+    const num = parseInt(match[1], 10);
+    if (!isNaN(num) && num > 0) return num;
+  }
+  return 1;
+}
+
+/**
+ * Extrai Idade do Condomínio
+ */
+function extrairIdadeCondominio(texto) {
+  const match = texto.match(/Idade\s*do\s*Condom[ií]nio\s*:\s*([^\n\r]+)/i);
+  if (match) {
+    return match[1].trim();
+  }
+  return 'Acima de 30 anos';
+}
+
+/**
+ * Extrai Categoria de Risco
+ */
+function extrairCategoriaRisco(texto) {
+  const match = texto.match(/Categoria\s*de\s*Risco\s*:\s*([^\n\r]+)/i);
+  if (match) {
+    return match[1].trim();
+  }
+  return 'Apenas Residencial';
+}
+
+/**
+ * Extrai Tipo de Seguro
+ */
+function extrairTipoSeguro(texto, seguradora) {
+  const match = texto.match(/Tipo\s*de\s*Seguro\s*:\s*([^\n\r]+)/i);
+  if (match) {
+    return match[1].trim();
+  }
+  return `Renovação ${seguradora.split(' ')[0]}`;
+}
+
+/**
+ * Extrai Produto / Ramo e Modalidade
+ */
+function extrairProdutoModalidade(texto) {
+  let produto = '16 - Condomínio';
+  let modalidade = 'Simples';
+
+  const matchProd = texto.match(/Produto\s*(?:\||\/)\s*Ramo\s*:\s*(.*?)(?:\s*-\s*Modalidade\s*:\s*(.*))?$/im);
+  if (matchProd) {
+    if (matchProd[1]) produto = matchProd[1].trim();
+    if (matchProd[2]) modalidade = matchProd[2].trim();
+  }
+  return { produto, modalidade };
+}
+
+/**
+ * Extrai Condições Gerais
+ */
+function extrairCondicoesGerais(texto) {
+  const match = texto.match(/Condi[çc][õo]es\s*Gerais\s*:\s*([^\n\r]+)/i);
+  if (match) {
+    return match[1].trim();
+  }
+  return '04/2025';
+}
+
+/**
+ * Extrai Versão da Tabela
+ */
+function extrairVersaoTabela(texto) {
+  const match = texto.match(/Vers[ãa]o\s*da\s*tabela\s*:\s*([^\n\r]+)/i);
+  if (match) {
+    return match[1].trim();
+  }
+  return '34';
+}
+
+/**
+ * Extrai Valor de Novo
+ */
+function extrairValorDeNovo(texto) {
+  const match = texto.match(/Valor\s*de\s*Novo\s*:\s*([^\n\r]+)/i);
+  if (match) {
+    const val = match[1].trim().toUpperCase();
+    return val.includes('SIM');
+  }
+  return true;
 }
 
 /**
@@ -326,24 +515,44 @@ async function extrairDadosApolicePDF(pdfBuffer) {
     const texto = cleanText(textoBruto);
 
     const seguradora = identificarSeguradora(texto);
+    const corretora = identificarCorretora(texto);
     const numeroApolice = extrairNumeroApolice(texto);
     const vigencia = extrairVigencia(texto);
     const cnpj = extrairCNPJ(texto);
     const endereco = extrairEndereco(texto);
     const lmg = extrairLMG(texto);
+    const elevadores = extrairElevadores(texto);
+    const andares = extrairAndares(texto);
+    const blocos = extrairBlocos(texto);
+    const idade = extrairIdadeCondominio(texto);
+    const categoriaRisco = extrairCategoriaRisco(texto);
+    const tipoSeguro = extrairTipoSeguro(texto, seguradora);
+    const { produto: produtoRamo, modalidade } = extrairProdutoModalidade(texto);
+    const condicoesGerais = extrairCondicoesGerais(texto);
+    const versaoTabela = extrairVersaoTabela(texto);
+    const valorDeNovo = extrairValorDeNovo(texto);
     const coberturas = extrairCoberturas(texto, lmg);
 
     return {
       sucesso: true,
       seguradora,
-      corretora: 'Setor Seguros',
+      corretora,
       numero_apolice: numeroApolice,
-      tipo_seguro: `Renovação ${seguradora.split(' ')[0]}`,
-      produto_ramo: '16 - Condomínio',
-      modalidade: 'Simples',
+      tipo_seguro: tipoSeguro,
+      produto_ramo: produtoRamo,
+      modalidade,
+      condicoes_gerais: condicoesGerais,
       limite_maximo_garantia: lmg,
+      versao_tabela: versaoTabela,
+      valor_de_novo: valorDeNovo,
       vigencia_inicio: vigencia.inicio || null,
       vigencia_fim: vigencia.fim || null,
+      idade_condominio: idade,
+      quantidade_andares: andares,
+      quantidade_elevadores: elevadores.quantidade,
+      tem_elevador: elevadores.temElevador,
+      quantidade_blocos: blocos,
+      categoria_risco: categoriaRisco,
       cnpj: cnpj || null,
       endereco_local_segurado: endereco || null,
       coberturas,
@@ -356,5 +565,23 @@ async function extrairDadosApolicePDF(pdfBuffer) {
 }
 
 module.exports = {
-  extrairDadosApolicePDF
+  extrairDadosApolicePDF,
+  identificarSeguradora,
+  identificarCorretora,
+  extrairNumeroApolice,
+  extrairVigencia,
+  extrairCNPJ,
+  extrairEndereco,
+  extrairLMG,
+  extrairElevadores,
+  extrairAndares,
+  extrairBlocos,
+  extrairIdadeCondominio,
+  extrairCategoriaRisco,
+  extrairTipoSeguro,
+  extrairProdutoModalidade,
+  extrairCondicoesGerais,
+  extrairVersaoTabela,
+  extrairValorDeNovo,
+  extrairCoberturas
 };

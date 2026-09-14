@@ -340,10 +340,25 @@ export default function SeguroNovoEditarDrawer({
       if (data.limite_maximo_garantia) setLimiteMaximoGarantia(data.limite_maximo_garantia);
       if (data.vigencia_inicio) setVigenciaInicio(data.vigencia_inicio);
       if (data.vigencia_fim) setVigenciaFim(data.vigencia_fim);
+      if (data.idade_condominio) setIdadeCondominio(data.idade_condominio);
+      if (data.quantidade_andares) setQuantidadeAndares(data.quantidade_andares);
+      if (data.quantidade_elevadores !== undefined) {
+        setQuantidadeElevadores(data.quantidade_elevadores);
+        setTemElevador(data.quantidade_elevadores > 0);
+      }
+      if (data.quantidade_blocos !== undefined) setQuantidadeBlocos(data.quantidade_blocos);
+      if (data.categoria_risco) setCategoriaRisco(data.categoria_risco);
+      if (data.condicoes_gerais) setCondicoesGerais(data.condicoes_gerais);
+      if (data.versao_tabela) setVersaoTabela(data.versao_tabela);
+      if (data.valor_de_novo !== undefined) setValorDeNovo(data.valor_de_novo);
       if (data.endereco_local_segurado) setEnderecoLocalSegurado(data.endereco_local_segurado);
       if (data.cnpj) setCnpj(data.cnpj);
 
-      setSucessoExtracao(`Apólice analisada com sucesso (${data.paginasLidas || 1} pág.)! Seguradora: ${data.seguradora || 'Detectada'}, Vigência: ${data.vigencia_inicio ? data.vigencia_inicio.split('-').reverse().join('/') : '—'} até ${data.vigencia_fim ? data.vigencia_fim.split('-').reverse().join('/') : '—'}.`);
+      const vigStr = data.vigencia_inicio
+        ? `${data.vigencia_inicio.split('-').reverse().join('/')} até ${data.vigencia_fim ? data.vigencia_fim.split('-').reverse().join('/') : '—'}`
+        : 'Detectada';
+
+      setSucessoExtracao(`Apólice analisada com sucesso (${data.paginasLidas || 1} pág.)! Seguradora: ${data.seguradora || 'Detectada'}, Corretora: ${data.corretora || 'Detectada'}, Vigência: ${vigStr}.`);
     } catch (err) {
       setErro(err.message || 'Erro ao processar arquivo PDF da apólice.');
     } finally {
