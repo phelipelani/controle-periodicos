@@ -45,11 +45,8 @@ export default function SegurosFilters({
           onChange={(e) => onFiltroChange('corretora', e.target.value)}
         >
           <option value="Todas">Todas</option>
-          {corretoras.map((c, idx) => (
-            <option key={idx} value={c}>
-              {c}
-            </option>
-          ))}
+          <option value="Setor Seguros">Setor Seguros</option>
+          <option value="Síndico">Síndico</option>
         </select>
       </div>
 

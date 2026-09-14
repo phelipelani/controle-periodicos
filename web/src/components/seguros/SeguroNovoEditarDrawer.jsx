@@ -34,7 +34,7 @@ export default function SeguroNovoEditarDrawer({
 
   // Form State - Apólice
   const [seguradora, setSeguradora] = useState('Allianz');
-  const [corretora, setCorretora] = useState('Corretora Alfa');
+  const [corretora, setCorretora] = useState('Setor Seguros');
   const [numeroApolice, setNumeroApolice] = useState('');
   const [enderecoLocalSegurado, setEnderecoLocalSegurado] = useState('');
   const [idadeCondominio, setIdadeCondominio] = useState('Acima de 30 anos');
@@ -567,14 +567,15 @@ export default function SeguroNovoEditarDrawer({
                 </div>
                 <div className="seg-filter-group">
                   <label>Corretora *</label>
-                  <input
-                    type="text"
+                  <select
                     className="seg-input"
-                    placeholder="Ex: Corretora Alfa..."
-                    value={corretora}
+                    value={corretora || 'Setor Seguros'}
                     onChange={(e) => setCorretora(e.target.value)}
                     required
-                  />
+                  >
+                    <option value="Setor Seguros">Setor Seguros</option>
+                    <option value="Síndico">Síndico</option>
+                  </select>
                 </div>
               </div>
 
