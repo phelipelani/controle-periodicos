@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="roofGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EF233C" />
+      <stop offset="100%" stop-color="#D71920" />
+    </linearGradient>
+  </defs>
+  <!-- Base House / Roof Shape -->
+  <path d="M16 2 L2 12.5 L6 12.5 L6 28 C6 29.1 6.9 30 8 30 L24 30 C25.1 30 26 29.1 26 28 L26 12.5 L30 12.5 Z" fill="url(#roofGrad)" />
+  <!-- Inner Calendar Body -->
+  <rect x="9" y="13" width="14" height="13" rx="2.5" fill="#FFFFFF" />
+  <!-- Calendar Header Bar -->
+  <path d="M9 15.5 C9 14.1 10.1 13 11.5 13 L20.5 13 C21.9 13 23 14.1 23 15.5 L23 17 L9 17 Z" fill="#1E293B" />
+  <!-- Calendar Pins -->
+  <rect x="11.5" y="11.5" width="2" height="3" rx="1" fill="#EF233C" />
+  <rect x="18.5" y="11.5" width="2" height="3" rx="1" fill="#EF233C" />
+  <!-- Checkmark -->
+  <path d="M12.5 21.5 L15 24 L20 18.5" fill="none" stroke="#EF233C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
