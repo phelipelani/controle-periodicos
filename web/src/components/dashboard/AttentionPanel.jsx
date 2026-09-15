@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatarData } from '../../format';
+import { formatarData } from '../format';
 import Modal from '../Modal';
 import {
   IcoEye,
