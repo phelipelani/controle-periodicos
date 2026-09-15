@@ -23,7 +23,11 @@ const getUploadDirDedetizacao = (ano, codigoCondominio) => {
     baseDir = path.join(dataDir, 'adm', 'dedetizacao');
   }
 
-  const codFormatado = codigoCondominio ? String(codigoCondominio).padStart(3, '0') : 'geral';
+  let codFormatado = '001';
+  if (codigoCondominio !== undefined && codigoCondominio !== null && String(codigoCondominio).trim() !== '') {
+    const num = parseInt(codigoCondominio, 10);
+    codFormatado = !isNaN(num) && num > 0 ? String(num).padStart(3, '0') : String(codigoCondominio).padStart(3, '0');
+  }
   const anoFinal = String(ano || new Date().getFullYear());
   const dir = path.join(baseDir, anoFinal, codFormatado);
   
@@ -36,8 +40,23 @@ const getUploadDirDedetizacao = (ano, codigoCondominio) => {
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     try {
-      const ano = req.body.ano || new Date().getFullYear();
-      const codigoCondominio = req.body.codigo_condominio || req.body.condominio_id || '000';
+      const ano = req.query.ano || req.body.ano || (req.body.data_realizacao ? req.body.data_realizacao.split('-')[0] : null) || new Date().getFullYear();
+      let codigoCondominio = req.query.codigo_condominio || req.query.condominio_id || req.body.codigo_condominio || req.body.condominio_id;
+      
+      if (!codigoCondominio && req.params && req.params.id) {
+        try {
+          const row = db.prepare(`
+            SELECT c.id AS condominio_id
+            FROM agendamentos a
+            JOIN condominios c ON c.id = a.condominio_id
+            WHERE a.id = ?
+          `).get(req.params.id);
+          if (row) codigoCondominio = row.condominio_id;
+        } catch (e) {
+          // ignore
+        }
+      }
+
       const dir = getUploadDirDedetizacao(ano, codigoCondominio);
       cb(null, dir);
     } catch (err) {
@@ -45,7 +64,7 @@ const storage = multer.diskStorage({
     }
   },
   filename: function (req, file, cb) {
-    const ano = req.body.ano || new Date().getFullYear();
+    const ano = req.query.ano || req.body.ano || (req.body.data_realizacao ? req.body.data_realizacao.split('-')[0] : null) || new Date().getFullYear();
     const uniqueSuffix = Date.now().toString().slice(-6);
     const ext = path.extname(file.originalname);
     cb(null, `recibo_dedetizacao_${ano}_${uniqueSuffix}${ext}`);

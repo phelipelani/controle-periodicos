@@ -25,13 +25,18 @@ const UploadDocumento = ({ onFileUploaded, initialPath, codigoCondominio, ano })
     setError(null);
     
     const formData = new FormData();
-    formData.append('documento', selectedFile);
     if (codigoCondominio) formData.append('codigo_condominio', codigoCondominio);
     if (ano) formData.append('ano', ano);
+    formData.append('documento', selectedFile);
 
     try {
       const token = localStorage.getItem('cp_token');
-      const res = await fetch('/api/upload/dedetizacao/recibo', {
+      const queryParams = new URLSearchParams();
+      if (codigoCondominio) queryParams.set('codigo_condominio', codigoCondominio);
+      if (ano) queryParams.set('ano', ano);
+      const url = `/api/upload/dedetizacao/recibo${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

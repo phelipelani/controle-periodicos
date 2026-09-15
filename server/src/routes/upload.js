@@ -17,7 +17,11 @@ const getUploadDirDedetizacao = (ano, codigoCondominio) => {
     baseDir = path.join(dataDir, 'adm', 'dedetizacao');
   }
 
-  const codFormatado = codigoCondominio ? String(codigoCondominio).padStart(3, '0') : 'geral';
+  let codFormatado = '001';
+  if (codigoCondominio !== undefined && codigoCondominio !== null && String(codigoCondominio).trim() !== '') {
+    const num = parseInt(codigoCondominio, 10);
+    codFormatado = !isNaN(num) && num > 0 ? String(num).padStart(3, '0') : String(codigoCondominio).padStart(3, '0');
+  }
   const anoFinal = String(ano || new Date().getFullYear());
   const dir = path.join(baseDir, anoFinal, codFormatado);
   
@@ -30,16 +34,16 @@ const getUploadDirDedetizacao = (ano, codigoCondominio) => {
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     try {
-      const ano = req.body.ano || new Date().getFullYear();
-      const codigoCondominio = req.body.codigo_condominio || req.body.condominio_id || req.query.codigo || req.query.condominio_id || '000';
-      const dir = getUploadDirDedetizacao(ano, codigoCondominio);
+      const ano = req.query.ano || req.body.ano || new Date().getFullYear();
+      let rawCod = req.query.codigo_condominio || req.query.codigo || req.query.condominio_id || req.body.codigo_condominio || req.body.condominio_id || req.params.condominioId || req.params.id;
+      const dir = getUploadDirDedetizacao(ano, rawCod);
       cb(null, dir);
     } catch (err) {
       cb(err, null);
     }
   },
   filename: function (req, file, cb) {
-    const ano = req.body.ano || new Date().getFullYear();
+    const ano = req.query.ano || req.body.ano || new Date().getFullYear();
     const uniqueSuffix = Date.now().toString().slice(-6);
     const ext = path.extname(file.originalname);
     cb(null, `recibo_dedetizacao_${ano}_${uniqueSuffix}${ext}`);

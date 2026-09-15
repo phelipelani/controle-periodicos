@@ -60,11 +60,12 @@ export default function Agendamentos() {
     }
   }
 
-  async function confirmarRealizacao(agId, formData) {
+  async function confirmarRealizacao(ag, formData) {
     try {
       setErro('');
       const token = localStorage.getItem('cp_token');
-      const res = await fetch(`/api/agendamentos/${agId}/confirmar`, {
+      const cod = ag.codigo_condominio || ag.condominio_id;
+      const res = await fetch(`/api/agendamentos/${ag.id}/confirmar?codigo_condominio=${encodeURIComponent(cod)}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -83,14 +84,19 @@ export default function Agendamentos() {
     }
   }
 
-  async function enviarRecibo(agId, file) {
+  async function enviarRecibo(ag, file) {
     try {
       setErro('');
+      const ano = ag.data_agendada ? ag.data_agendada.split('-')[0] : new Date().getFullYear();
+      const cod = ag.codigo_condominio || ag.condominio_id;
+
       const formData = new FormData();
+      formData.append('ano', ano);
+      formData.append('codigo_condominio', cod);
       formData.append('documento', file);
       
       const token = localStorage.getItem('cp_token');
-      const res = await fetch(`/api/agendamentos/${agId}/recibo`, {
+      const res = await fetch(`/api/agendamentos/${ag.id}/recibo?codigo_condominio=${encodeURIComponent(cod)}&ano=${encodeURIComponent(ano)}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -416,7 +422,7 @@ function ModalConfirmacaoRealizacao({ agendamento, onConfirmar, onFechar }) {
     if (arquivo) {
       formData.append('documento', arquivo);
     }
-    await onConfirmar(agendamento.id, formData);
+    await onConfirmar(agendamento, formData);
     setSalvando(false);
   };
 
@@ -500,7 +506,7 @@ function ModalUploadRecibo({ agendamento, onUpload, onFechar }) {
     e.preventDefault();
     if (!arquivo) return;
     setEnviando(true);
-    await onUpload(agendamento.id, arquivo);
+    await onUpload(agendamento, arquivo);
     setEnviando(false);
   };
 
