@@ -3,50 +3,50 @@
    ======================================================== */
 
 :root {
-  --cond-bg: #ffffff;
-  --cond-card-bg: #ffffff;
-  --cond-card-hover-bg: #f8fafc;
-  --cond-border: #e2e8f0;
-  --cond-border-hover: #cbd5e1;
-  --cond-text-main: #0f172a;
-  --cond-text-sub: #475569;
-  --cond-text-muted: #64748b;
-  --cond-input-bg: #f8fafc;
-  --cond-input-border: #cbd5e1;
-  --cond-input-color: #0f172a;
-  --cond-inner-grid-bg: #f8fafc;
-  --cond-inner-grid-border: #f1f5f9;
-  --cond-badge-bg: #f1f5f9;
-  --cond-badge-text: #475569;
-  --cond-badge-border: #e2e8f0;
-  --cond-btn-bg: #f8fafc;
-  --cond-btn-border: #e2e8f0;
-  --cond-btn-text: #475569;
+  --cond-bg: var(--bg-app);
+  --cond-card-bg: var(--bg-surface);
+  --cond-card-hover-bg: var(--bg-surface-elevated);
+  --cond-border: var(--border);
+  --cond-border-hover: var(--primary);
+  --cond-text-main: var(--text-primary);
+  --cond-text-sub: var(--text-secondary);
+  --cond-text-muted: var(--text-muted);
+  --cond-input-bg: var(--bg-input);
+  --cond-input-border: var(--border);
+  --cond-input-color: var(--text-primary);
+  --cond-inner-grid-bg: var(--bg-surface-elevated);
+  --cond-inner-grid-border: var(--border-subtle);
+  --cond-badge-bg: var(--neutral-badge-bg);
+  --cond-badge-text: var(--neutral-badge-text);
+  --cond-badge-border: var(--border);
+  --cond-btn-bg: var(--bg-surface-elevated);
+  --cond-btn-border: var(--border);
+  --cond-btn-text: var(--text-secondary);
   --cond-card-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   --cond-card-hover-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
 [data-theme="dark"],
 body.dark-theme {
-  --cond-bg: #0b0f19;
-  --cond-card-bg: #162235;
-  --cond-card-hover-bg: #1b2a40;
-  --cond-border: #283a54;
-  --cond-border-hover: #36506e;
-  --cond-text-main: #f1f5f9;
-  --cond-text-sub: #b7c4d6;
-  --cond-text-muted: #8292a8;
-  --cond-input-bg: #0f1928;
-  --cond-input-border: #31445f;
-  --cond-input-color: #f1f5f9;
-  --cond-inner-grid-bg: #111b2b;
-  --cond-inner-grid-border: #243650;
-  --cond-badge-bg: #22344d;
-  --cond-badge-text: #cbd5e1;
-  --cond-badge-border: #31445f;
-  --cond-btn-bg: #1b2a40;
-  --cond-btn-border: #31445f;
-  --cond-btn-text: #d5dfec;
+  --cond-bg: var(--bg-app);
+  --cond-card-bg: var(--bg-surface);
+  --cond-card-hover-bg: var(--bg-surface-elevated);
+  --cond-border: var(--border);
+  --cond-border-hover: var(--primary);
+  --cond-text-main: var(--text-primary);
+  --cond-text-sub: var(--text-secondary);
+  --cond-text-muted: var(--text-muted);
+  --cond-input-bg: var(--bg-input);
+  --cond-input-border: var(--border);
+  --cond-input-color: var(--text-primary);
+  --cond-inner-grid-bg: var(--bg-surface-elevated);
+  --cond-inner-grid-border: var(--border-subtle);
+  --cond-badge-bg: var(--neutral-badge-bg);
+  --cond-badge-text: var(--neutral-badge-text);
+  --cond-badge-border: var(--border);
+  --cond-btn-bg: var(--bg-surface-elevated);
+  --cond-btn-border: var(--border);
+  --cond-btn-text: var(--text-secondary);
   --cond-card-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   --cond-card-hover-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
 }
@@ -82,8 +82,8 @@ body.dark-theme {
 }
 
 .cond-btn-novo {
-  background: #EF233C;
-  color: #FFFFFF;
+  background: var(--primary);
+  color: var(--primary-contrast);
   border: none;
   border-radius: 10px;
   padding: 10px 20px;
@@ -94,13 +94,12 @@ body.dark-theme {
   align-items: center;
   gap: 8px;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(239, 35, 60, 0.25);
+  box-shadow: 0 4px 14px var(--primary-glow);
 }
 
 .cond-btn-novo:hover {
-  background: #F43F5E;
+  background: var(--primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(239, 35, 60, 0.35);
 }
 
 .cond-btn-novo:active {

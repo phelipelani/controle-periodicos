@@ -54,22 +54,22 @@ function renderBadge(status) {
 
 function renderTipoBadge(tipo) {
   const t = (tipo || '').toLowerCase();
-  if (t.includes('apolice') || t.includes('apólice')) {
-    return <span style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Apólice</span>;
+  if (t.includes('apolice')) {
+    return <span style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)', border: '1px solid var(--danger)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Apólice</span>;
   }
   if (t.includes('boleto') || t.includes('parcela')) {
-    return <span style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Boleto / Parcela</span>;
+    return <span style={{ background: 'var(--warning-soft)', color: 'var(--warning-text)', border: '1px solid var(--warning)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Boleto / Parcela</span>;
   }
   if (t.includes('proposta')) {
-    return <span style={{ background: '#f3e8ff', color: '#7e22ce', border: '1px solid #e9d5ff', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Proposta</span>;
+    return <span style={{ background: 'var(--primary-soft)', color: 'var(--primary)', border: '1px solid var(--primary-glow)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Proposta</span>;
   }
   if (t.includes('endosso')) {
-    return <span style={{ background: '#ffedd5', color: '#c2410c', border: '1px solid #fed7aa', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Endosso</span>;
+    return <span style={{ background: 'var(--warning-soft)', color: 'var(--warning-text)', border: '1px solid var(--warning)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Endosso</span>;
   }
   if (t.includes('sinistro')) {
-    return <span style={{ background: '#ffe4e6', color: '#e11d48', border: '1px solid #fecdd3', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Sinistro</span>;
+    return <span style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)', border: '1px solid var(--danger)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Sinistro</span>;
   }
-  return <span style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>{tipo || 'Documento'}</span>;
+  return <span style={{ background: 'var(--neutral-badge-bg)', color: 'var(--neutral-badge-text)', border: '1px solid var(--border)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>{tipo || 'Documento'}</span>;
 }
 
 // Coberturas padrão caso não venham do backend para exibição completa
@@ -252,11 +252,11 @@ export default function SeguroFichaDrawer({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>{cond.nome || 'Condomínio'}</h2>
+                <h2 style={{ margin: 0, fontSize: '18px', color: 'var(--text-primary)' }}>{cond.nome || 'Condomínio'}</h2>
                 <span className="seg-code-badge">Cód. {cond.codigo}</span>
                 {renderBadge(apolice.status)}
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' }}>
                 Última atualização: {apolice.atualizadoEm ? new Date(apolice.atualizadoEm).toLocaleString('pt-BR') : '—'} • Por: {apolice.atualizadoPor || 'Administração'}
               </div>
             </div>
@@ -288,11 +288,11 @@ export default function SeguroFichaDrawer({
       {/* Drawer Body */}
       <div className="seg-drawer-body">
         {carregando ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
             Carregando detalhes do seguro...
           </div>
         ) : erro ? (
-          <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '12px', borderRadius: '8px' }}>
+          <div style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)', padding: '12px', borderRadius: '8px', border: '1px solid var(--danger)' }}>
             {erro}
           </div>
         ) : (
@@ -300,16 +300,16 @@ export default function SeguroFichaDrawer({
             {/* ABA PRINCIPAL: SEÇÕES CONTÍNUAS */}
             {abaAtiva === 'ficha' && (
               <>
-                {/* 1° INFOS DO CONDOMÍNIO (COMO NO PRINT 1) */}
+                {/* 1° INFOS DO CONDOMÍNIO */}
                 <div className="seg-card-section">
                   <div className="seg-card-header">
-                    <div className="seg-card-title" style={{ color: '#0369a1' }}>
+                    <div className="seg-card-title" style={{ color: 'var(--primary)' }}>
                       <span style={{ fontSize: '18px' }}>👤</span> 1° SUAS INFORMAÇÕES (CONDOMÍNIO)
                     </div>
                     {podeEditarCadastrais && (
                       <button
                         type="button"
-                        style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                         onClick={() => onEditar(ficha)}
                       >
                         <IcoEdit /> Editar
@@ -348,24 +348,40 @@ export default function SeguroFichaDrawer({
                     </div>
                     <div className="seg-card-item">
                       <label>Cidade/UF:</label>
-                      <span>{cond.cidade || 'CARAGUATATUBA'}/{cond.uf || 'SP'}</span>
+                      <span>{cond.cidade || 'Caraguatatuba'}/{cond.uf || 'SP'}</span>
                     </div>
                     <div className="seg-card-item">
-                      <label>Gerente:</label>
-                      <span>{cond.gerente || 'Carlos'}</span>
+                      <label>Qtd. Apartamentos:</label>
+                      <span>{cond.quantidadeApartamentos ?? cond.quantidade_apartamentos ?? 10}</span>
+                    </div>
+                    <div className="seg-card-item">
+                      <label>Tipo:</label>
+                      <span>{cond.tipo || 'Vertical'}</span>
+                    </div>
+                    <div className="seg-card-item">
+                      <label>Tem Elevador?</label>
+                      <span>{cond.temElevador !== false ? 'Sim' : 'Não'}</span>
+                    </div>
+                    <div className="seg-card-item">
+                      <label>Portão Automático?</label>
+                      <span>{cond.temPortaoAutomatico !== false ? 'Sim' : 'Não'}</span>
+                    </div>
+                    <div className="seg-card-item">
+                      <label>Funcionários Registrados?</label>
+                      <span>{cond.quantidadeFuncionarios ?? cond.quantidade_funcionarios ?? 0}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* 2° INFORMAÇÕES DO SEGURO (COMO NO PRINT 1) */}
+                {/* 2° INFOS DO SEGURO */}
                 <div className="seg-card-section">
                   <div className="seg-card-header">
-                    <div className="seg-card-title" style={{ color: '#0369a1' }}>
+                    <div className="seg-card-title" style={{ color: 'var(--primary)' }}>
                       <span style={{ fontSize: '18px' }}>🏠</span> 2° INFORMAÇÕES DO SEGURO
                     </div>
                     <button
                       type="button"
-                      style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       onClick={() => onEditar(ficha)}
                     >
                       <IcoEdit /> Editar
@@ -375,143 +391,158 @@ export default function SeguroFichaDrawer({
                   <div className="seg-card-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                     <div className="seg-card-item" style={{ gridColumn: 'span 2' }}>
                       <label>Endereço do local segurado:</label>
-                      <span>{apolice.enderecoLocalSegurado || cond.endereco || 'RUA ANA FRANCISCA FACHINI, 220 - MARTIM DE SÁ - 11662-500 - CARAGUATATUBA/SP'}</span>
+                      <span>{apolice.enderecoLocalSegurado || cond.endereco || 'R. ANA FRANCISCA FACHINI, 220, IMCOSTA'}</span>
                     </div>
                     <div className="seg-card-item">
-                      <label>Idade do Condomínio:</label>
+                      <label>Idade do imóvel:</label>
                       <span>{apolice.idadeCondominio || 'Acima de 30 anos'}</span>
                     </div>
                     <div className="seg-card-item">
-                      <label>Quantidade de Andares:</label>
+                      <label>Quantidade de andares:</label>
                       <span>{apolice.quantidadeAndares || '6 a 10 Andares'}</span>
                     </div>
                     <div className="seg-card-item">
                       <label>Quantidade de elevadores:</label>
-                      <span>{apolice.quantidadeElevadores || 1} Elevador</span>
+                      <span>{apolice.quantidadeElevadores ?? 1}</span>
                     </div>
                     <div className="seg-card-item">
-                      <label>Quantidade de Blocos neste risco:</label>
-                      <span>{apolice.quantidadeBlocos || 1}</span>
+                      <label>Quantidade de blocos:</label>
+                      <span>{apolice.quantidadeBlocos ?? 1}</span>
                     </div>
                     <div className="seg-card-item">
-                      <label>Categoria de Risco:</label>
+                      <label>Categoria do risco:</label>
                       <span>{apolice.categoriaRisco || 'Apenas Residencial'}</span>
                     </div>
                     <div className="seg-card-item">
-                      <label>Tipo de Seguro:</label>
-                      <span>{apolice.tipoSeguro || `Renovação ${apolice.seguradora || 'Allianz'}`}</span>
+                      <label>Tipo de seguro:</label>
+                      <span>{apolice.tipoSeguro || 'Renovação Allianz'}</span>
                     </div>
                     <div className="seg-card-item">
-                      <label>Produto | Ramo:</label>
-                      <span>{apolice.produtoRamo || '16 - Condomínio'} - <strong>Modalidade:</strong> {apolice.modalidade || 'Simples'}</span>
+                      <label>Seguradora:</label>
+                      <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{apolice.seguradora || 'Allianz'}</span>
                     </div>
                     <div className="seg-card-item">
-                      <label>Condições Gerais:</label>
+                      <label>Corretora:</label>
+                      <span>{apolice.corretora || 'Setor Seguros'}</span>
+                    </div>
+                    <div className="seg-card-item">
+                      <label>N° da Apólice:</label>
+                      <span style={{ fontWeight: 700 }}>{apolice.numeroApolice || '000000000000000'}</span>
+                    </div>
+                    <div className="seg-card-item">
+                      <label>Produto / Ramo:</label>
+                      <span>{apolice.produtoRamo || '16 - Condomínio'}</span>
+                    </div>
+                    <div className="seg-card-item">
+                      <label>Modalidade:</label>
+                      <span>{apolice.modalidade || 'Simples'}</span>
+                    </div>
+                    <div className="seg-card-item">
+                      <label>Condições gerais:</label>
                       <span>{apolice.condicoesGerais || '04/2025'}</span>
                     </div>
                     <div className="seg-card-item">
-                      <label>Limite Máximo de Garantia da Apólice:</label>
-                      <span style={{ color: '#16a34a', fontWeight: 700 }}>{formatarMoeda(apolice.limiteMaximoGarantia || 5220000)}</span>
+                      <label>Limite Máximo de Garantia:</label>
+                      <span style={{ color: 'var(--success)', fontWeight: 700 }}>{formatarMoeda(apolice.limiteMaximoGarantia || 5220000)}</span>
                     </div>
                     <div className="seg-card-item">
                       <label>Versão da tabela:</label>
                       <span>{apolice.versaoTabela || '34'}</span>
                     </div>
                     <div className="seg-card-item" style={{ gridColumn: 'span 2' }}>
-                      <label>Vigência:</label>
-                      <span style={{ color: apolice.status === 'vencido' ? '#dc2626' : '#0f172a' }}>
-                        das 24H de {formatarData(apolice.vigenciaInicio || apolice.dataRenovacao || '2025-06-05')} às 24H de {formatarData(apolice.vigenciaFim || apolice.dataValidade || '2026-06-05')}
+                      <label>Vigência da apólice:</label>
+                      <span style={{ color: apolice.status === 'vencido' ? 'var(--danger)' : 'var(--text-primary)' }}>
+                        {formatarData(apolice.vigenciaInicio || '2025-06-05')} até {formatarData(apolice.vigenciaFim || '2026-06-05')}
                       </span>
                     </div>
                     <div className="seg-card-item">
-                      <label>Valor de Novo:</label>
-                      <span style={{ color: '#16a34a' }}>{apolice.valorDeNovo ? 'Sim' : 'Não'}</span>
+                      <label>Contratação a valor de novo?</label>
+                      <span style={{ color: 'var(--success)' }}>{apolice.valorDeNovo ? 'Sim' : 'Não'}</span>
                     </div>
-                    <div className="seg-card-item">
-                      <label>Seguradora / Corretora:</label>
-                      <span>{apolice.seguradora || 'Allianz'} / {apolice.corretora || 'Corretora Alfa'}</span>
-                    </div>
+                    {apolice.observacoes && (
+                      <div className="seg-card-item" style={{ gridColumn: 'span 2' }}>
+                        <label>Observações:</label>
+                        <span>{apolice.observacoes}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* 3° PRINCIPAIS INFOS DE COBERTURA (COBERTURA POR UNIDADE + TABELA DO PRINT 2) */}
+                {/* 3° PRINCIPAIS INFOS DE COBERTURA */}
                 <div className="seg-card-section">
                   <div className="seg-card-header">
-                    <div className="seg-card-title" style={{ color: '#0369a1' }}>
+                    <div className="seg-card-title" style={{ color: 'var(--primary)' }}>
                       <span style={{ fontSize: '18px' }}>🛡️</span> 3° PRINCIPAIS INFOS DE COBERTURA
                     </div>
                     <button
                       type="button"
-                      style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       onClick={() => onEditar(ficha)}
                     >
-                      <IcoEdit /> Editar valores
+                      <IcoEdit /> Editar
                     </button>
                   </div>
 
-                  {/* Caixa de Cobertura por Unidade e Cálculo Automático */}
-                  <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', alignItems: 'center' }}>
+                  {/* Banner Destaque de Cobertura por Unidade */}
+                  <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', alignItems: 'center' }}>
                     <div>
-                      <span style={{ fontSize: '12px', color: '#0369a1', fontWeight: 600 }}>Cobertura por Unidade:</span>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
-                        {formatarMoeda(valorUnidade)}
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>Cobertura por Unidade:</span>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
+                        {formatarMoeda(coberturaUnidade)}
                       </div>
                     </div>
                     <div>
-                      <span style={{ fontSize: '12px', color: '#0369a1', fontWeight: 600 }}>Qtd. de Apartamentos:</span>
-                      <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
-                        {qtdUnidades} unidades
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>Qtd. de Apartamentos:</span>
+                      <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>
+                        {qtdAptos} unidades
                       </div>
                     </div>
-                    <div style={{ background: '#ffffff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e0f2fe' }}>
-                      <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700, textTransform: 'uppercase' }}>
-                        Soma Cobertura Básica / Incêndio:
+                    <div style={{ background: 'var(--bg-surface)', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 700, textTransform: 'uppercase' }}>
+                        COBERTURA TOTAL (INCÊNDIO)
                       </span>
-                      <div style={{ fontSize: '20px', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>
-                        {formatarMoeda(totalIncendioCalculado)}
+                      <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--success)', marginTop: '2px' }}>
+                        {formatarMoeda(coberturaTotalCalculada)}
                       </div>
                     </div>
                   </div>
 
-                  {/* Tabela de Coberturas como no Print 2 */}
+                  {/* Tabela de Coberturas */}
                   <div style={{ overflowX: 'auto', marginTop: '6px' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                       <thead>
-                        <tr style={{ background: '#dcfce7', color: '#166534', borderBottom: '2px solid #bbf7d0' }}>
+                        <tr style={{ background: 'var(--bg-surface-elevated)', color: 'var(--text-primary)', borderBottom: '2px solid var(--border)' }}>
                           <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 700 }}>COBERTURAS</th>
                           <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>Limite Máximo de Indenização</th>
                           <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>Preço por Cobertura</th>
-                          <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, borderLeft: '1px solid #bbf7d0' }} colSpan="2">
+                          <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, borderLeft: '1px solid var(--border)' }} colSpan="2">
                             Franquia
                           </th>
                         </tr>
-                        <tr style={{ background: '#f0fdf4', color: '#166534', fontSize: '11px', borderBottom: '1px solid #bbf7d0' }}>
+                        <tr style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)', fontSize: '11px', borderBottom: '1px solid var(--border)' }}>
                           <th colSpan="3"></th>
                           <th style={{ padding: '4px 8px', textAlign: 'center', width: '50px' }}>%</th>
                           <th style={{ padding: '4px 8px', textAlign: 'right', width: '100px' }}>R$</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {listaCoberturas.map((cob, idx) => {
-                          const isBasic = cob.tipo === 'incendio' || cob.tipo === 'basica_simples';
-                          const limiteVal = isBasic ? totalIncendioCalculado : (cob.valor_total_calculado || cob.valor_segurado || cob.limite || 50000);
-                          const nomeExibicao = cob.nome_personalizado || cob.nome || (cob.tipo === 'incendio' ? 'Básica Simples (Incêndio)' : cob.tipo);
-
+                        {coberturasExibicao.map((cob, idx) => {
+                          const isTotal = cob.nome?.toLowerCase().includes('incêndio') || cob.nome?.toLowerCase().includes('basica') || cob.nome?.toLowerCase().includes('básica');
                           return (
-                            <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                              <td style={{ padding: '10px 12px', fontWeight: 600, color: '#1e293b' }}>
-                                {nomeExibicao}
+                            <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)', background: idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-surface-elevated)' }}>
+                              <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                {cob.nome} {isTotal && <span style={{ color: 'var(--success)', fontSize: '11px', fontWeight: 700 }}> (Cobertura Básica)</span>}
                               </td>
-                              <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
-                                {formatarMoeda(limiteVal)}
+                              <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: isTotal ? 'var(--success)' : 'var(--text-primary)' }}>
+                                {formatarMoeda(cob.limite_indenizacao || cob.limite)}
                               </td>
-                              <td style={{ padding: '10px 12px', textAlign: 'right', color: '#334155' }}>
-                                {cob.preco_cobertura ? formatarMoeda(cob.preco_cobertura) : (cob.preco ? formatarMoeda(cob.preco) : '—')}
+                              <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>
+                                {cob.premio ? formatarMoeda(cob.premio) : '-'}
                               </td>
-                              <td style={{ padding: '10px 8px', textAlign: 'center', color: '#64748b' }}>
+                              <td style={{ padding: '10px 8px', textAlign: 'center', color: 'var(--text-muted)' }}>
                                 {cob.franquia_percentual != null ? `${cob.franquia_percentual}%` : (cob.franquia_pct ? `${cob.franquia_pct}%` : '-')}
                               </td>
-                              <td style={{ padding: '10px 12px', textAlign: 'right', color: '#334155' }}>
+                              <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>
                                 {cob.sem_franquia ? 'Sem Franquia' : (cob.franquia_reais ? formatarMoeda(cob.franquia_reais) : (cob.franquia_rs ? formatarMoeda(cob.franquia_rs) : 'Sem Franquia'))}
                               </td>
                             </tr>
@@ -522,15 +553,15 @@ export default function SeguroFichaDrawer({
                   </div>
                 </div>
 
-                {/* 4° SEÇÃO: DOCUMENTOS & BOLETOS DA APÓLICE (ARMAZENAMENTO EM NUVEM CONDOMÍNIOS/SEGUROS/[ano]/[cod]) */}
-                <div className="seg-card-section" style={{ border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                {/* 4° SEÇÃO: DOCUMENTOS & BOLETOS DA APÓLICE */}
+                <div className="seg-card-section" style={{ border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                   <div className="seg-card-header" style={{ flexWrap: 'wrap', gap: '8px' }}>
                     <div>
-                      <div className="seg-card-title" style={{ color: '#0f172a', fontSize: '15px' }}>
+                      <div className="seg-card-title" style={{ color: 'var(--text-primary)', fontSize: '15px' }}>
                         <span style={{ fontSize: '18px' }}>📂</span> 4° DOCUMENTOS & BOLETOS DA APÓLICE ({documentos.length})
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                        Nuvem: <code style={{ background: '#f1f5f9', padding: '2px 5px', borderRadius: '4px', color: '#0369a1' }}>CONDOMÍNIOS/SEGUROS/{anoDoc}/{String(cond.codigo || cond.id).padStart(3, '0')}/</code>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        Nuvem: <code style={{ background: 'var(--bg-surface-elevated)', padding: '2px 5px', borderRadius: '4px', color: 'var(--primary)' }}>CONDOMÍNIOS/SEGUROS/{anoDoc}/{String(cond.codigo || cond.id).padStart(3, '0')}/</code>
                       </div>
                     </div>
 
@@ -546,14 +577,14 @@ export default function SeguroFichaDrawer({
 
                   {/* Formulário de Upload de Documentos */}
                   {mostrarUploadDoc && (
-                    <form onSubmit={handleUploadDocumento} style={{ background: '#f8fafc', border: '1px dashed #94a3b8', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
-                      <div style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <form onSubmit={handleUploadDocumento} style={{ background: 'var(--bg-surface-elevated)', border: '1px dashed var(--border)', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <IcoUpload /> Anexar Novo Arquivo ao Seguro
                       </div>
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                         <div>
-                          <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '4px' }}>Tipo de Documento *</label>
+                          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Tipo de Documento *</label>
                           <select
                             className="seg-input"
                             style={{ width: '100%' }}
@@ -571,7 +602,7 @@ export default function SeguroFichaDrawer({
                         </div>
 
                         <div>
-                          <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '4px' }}>Ano de Referência</label>
+                          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Ano de Referência</label>
                           <input
                             type="number"
                             className="seg-input"
@@ -584,11 +615,11 @@ export default function SeguroFichaDrawer({
                       </div>
 
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '4px' }}>Arquivo (PDF, Imagem, Docx) *</label>
+                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Arquivo (PDF, Imagem, Docx) *</label>
                         <input
                           type="file"
                           className="seg-input"
-                          style={{ width: '100%', background: '#ffffff' }}
+                          style={{ width: '100%', background: 'var(--bg-input)' }}
                           onChange={(e) => setArquivoDoc(e.target.files[0] || null)}
                           required
                         />
@@ -607,12 +638,12 @@ export default function SeguroFichaDrawer({
 
                   {/* Lista de Documentos Anexados */}
                   {documentos.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '24px 16px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                    <div style={{ textAlign: 'center', padding: '24px 16px', background: 'var(--bg-surface-elevated)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
                       <div style={{ fontSize: '28px', marginBottom: '6px' }}>📄</div>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
                         Nenhum documento ou boleto anexado a este condomínio ainda.
                       </div>
-                      <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', marginBottom: '12px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: '12px' }}>
                         Anexe a apólice oficial em PDF e os boletos das parcelas do seguro.
                       </div>
                       <button
@@ -635,8 +666,8 @@ export default function SeguroFichaDrawer({
                           <div
                             key={doc.id}
                             style={{
-                              background: '#ffffff',
-                              border: '1px solid #e2e8f0',
+                              background: 'var(--bg-surface)',
+                              border: '1px solid var(--border)',
                               borderRadius: '8px',
                               padding: '12px 14px',
                               display: 'flex',
@@ -652,8 +683,8 @@ export default function SeguroFichaDrawer({
                                   width: '36px',
                                   height: '36px',
                                   borderRadius: '8px',
-                                  background: doc.nome_arquivo?.toLowerCase().endsWith('.pdf') ? '#fee2e2' : '#f1f5f9',
-                                  color: doc.nome_arquivo?.toLowerCase().endsWith('.pdf') ? '#dc2626' : '#475569',
+                                  background: doc.nome_arquivo?.toLowerCase().endsWith('.pdf') ? 'var(--danger-soft)' : 'var(--bg-surface-elevated)',
+                                  color: doc.nome_arquivo?.toLowerCase().endsWith('.pdf') ? 'var(--danger)' : 'var(--text-secondary)',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -667,15 +698,15 @@ export default function SeguroFichaDrawer({
 
                               <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                  <span style={{ fontWeight: 600, fontSize: '13px', color: '#0f172a' }}>
+                                  <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>
                                     {doc.nome_arquivo}
                                   </span>
                                   {renderTipoBadge(doc.tipo)}
                                 </div>
-                                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                                   <span>{formatarTamanho(doc.tamanho)}</span> • <span>Ano {doc.ano || '—'}</span> • <span>Enviado em {doc.criado_em ? new Date(doc.criado_em).toLocaleDateString('pt-BR') : '—'} por {doc.uploaded_by_nome || 'Sistema'}</span>
                                 </div>
-                                <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px', fontFamily: 'monospace' }}>
+                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'monospace' }}>
                                   {relativePath}
                                 </div>
                               </div>
@@ -714,7 +745,7 @@ export default function SeguroFichaDrawer({
                               <button
                                 type="button"
                                 className="seg-btn-icon"
-                                style={{ color: '#dc2626' }}
+                                style={{ color: 'var(--danger)' }}
                                 title="Excluir documento"
                                 onClick={() => handleExcluirDocumento(doc.id, doc.nome_arquivo)}
                               >
@@ -731,30 +762,30 @@ export default function SeguroFichaDrawer({
                 {/* 5° HISTÓRICO DE AUDITORIA & ALTERAÇÕES */}
                 <div className="seg-card-section">
                   <div className="seg-card-header">
-                    <div className="seg-card-title" style={{ color: '#0369a1' }}>
+                    <div className="seg-card-title" style={{ color: 'var(--primary)' }}>
                       <span style={{ fontSize: '18px' }}>📜</span> 5° HISTÓRICO DE AUDITORIA & ALTERAÇÕES
                     </div>
                   </div>
 
                   {auditoria.length === 0 ? (
-                    <div style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic' }}>
+                    <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                       Nenhum registro de alteração anterior.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {auditoria.map((log) => (
-                        <div key={log.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', fontSize: '13px' }}>
+                        <div key={log.id} style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', fontSize: '13px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                            <span style={{ fontWeight: 600, color: '#0f172a' }}>{log.usuario_nome || 'Usuário'} ({log.papel || 'perfil'})</span>
-                            <span style={{ fontSize: '11px', color: '#64748b' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{log.usuario_nome || 'Usuário'} ({log.papel || 'perfil'})</span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                               {log.criado_em ? new Date(log.criado_em).toLocaleString('pt-BR') : '—'}
                             </span>
                           </div>
 
-                          <div style={{ color: '#334155' }}>
+                          <div style={{ color: 'var(--text-secondary)' }}>
                             {log.campo ? (
                               <>
-                                Alterou <strong>{log.campo}</strong> de <code style={{ background: '#fee2e2', padding: '2px 4px', borderRadius: '4px' }}>{log.valor_anterior || '—'}</code> para <code style={{ background: '#dcfce7', padding: '2px 4px', borderRadius: '4px' }}>{log.valor_novo || '—'}</code>
+                                Alterou <strong>{log.campo}</strong> de <code style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)', padding: '2px 4px', borderRadius: '4px' }}>{log.valor_anterior || '—'}</code> para <code style={{ background: 'var(--success-soft)', color: 'var(--success-text)', padding: '2px 4px', borderRadius: '4px' }}>{log.valor_novo || '—'}</code>
                               </>
                             ) : (
                               <span>{log.acao}</span>
@@ -772,7 +803,7 @@ export default function SeguroFichaDrawer({
             {abaAtiva === 'sinistros' && (
               <div className="seg-card-section">
                 <div className="seg-card-header">
-                  <div className="seg-card-title">
+                  <div className="seg-card-title" style={{ color: 'var(--primary)' }}>
                     <IcoAlertTriangle /> Histórico e Acompanhamento de Sinistros
                   </div>
                   <button
@@ -786,11 +817,11 @@ export default function SeguroFichaDrawer({
                 </div>
 
                 {mostrarNovoSinistro && (
-                  <form onSubmit={handleSalvarSinistro} style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a' }}>Novo Registro de Sinistro</div>
+                  <form onSubmit={handleSalvarSinistro} style={{ background: 'var(--bg-surface-elevated)', padding: '16px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>Novo Registro de Sinistro</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 600 }}>Data do Ocorrido *</label>
+                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Data do Ocorrido *</label>
                         <input
                           type="date"
                           className="seg-input"
@@ -801,7 +832,7 @@ export default function SeguroFichaDrawer({
                         />
                       </div>
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 600 }}>Cobertura Acionada</label>
+                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Cobertura Acionada</label>
                         <select
                           className="seg-input"
                           style={{ width: '100%' }}
@@ -822,7 +853,7 @@ export default function SeguroFichaDrawer({
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 600 }}>Valor Reclamado (R$)</label>
+                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Valor Reclamado (R$)</label>
                         <input
                           type="number"
                           step="0.01"
@@ -834,7 +865,7 @@ export default function SeguroFichaDrawer({
                         />
                       </div>
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 600 }}>Status do Sinistro</label>
+                        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Status do Sinistro</label>
                         <select
                           className="seg-input"
                           style={{ width: '100%' }}
@@ -852,7 +883,7 @@ export default function SeguroFichaDrawer({
                     </div>
 
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 600 }}>Descrição dos Danos *</label>
+                      <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Descrição dos Danos *</label>
                       <textarea
                         rows="3"
                         className="seg-input"
@@ -875,28 +906,28 @@ export default function SeguroFichaDrawer({
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {sinistros.length === 0 ? (
-                    <div style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic' }}>
+                    <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                       Nenhum histórico de sinistro cadastrado.
                     </div>
                   ) : (
                     sinistros.map((sin) => (
-                      <div key={sin.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px' }}>
+                      <div key={sin.id} style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div>
-                            <span style={{ fontWeight: 700, fontSize: '13px' }}>{sin.cobertura_acionada || 'Sinistro'}</span>
-                            <span style={{ fontSize: '12px', color: '#64748b', marginLeft: '8px' }}>• Ocorrido em {formatarData(sin.data)}</span>
+                            <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)' }}>{sin.cobertura_acionada || 'Sinistro'}</span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>• Ocorrido em {formatarData(sin.data)}</span>
                           </div>
-                          <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 600 }}>
+                          <span style={{ background: 'var(--warning-soft)', color: 'var(--warning-text)', padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 600 }}>
                             {sin.status}
                           </span>
                         </div>
 
-                        <div style={{ fontSize: '13px', color: '#334155', margin: '8px 0' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '8px 0' }}>
                           {sin.descricao}
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#64748b' }}>
-                          <span>Valor Reclamado: <strong style={{ color: '#dc2626' }}>{formatarMoeda(sin.valor_reclamado)}</strong></span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
+                          <span>Valor Reclamado: <strong style={{ color: 'var(--danger)' }}>{formatarMoeda(sin.valor_reclamado)}</strong></span>
                           <span>Registrado por: {sin.registrado_por_nome || 'Sistema'}</span>
                         </div>
                       </div>
