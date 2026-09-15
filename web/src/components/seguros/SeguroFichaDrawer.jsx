@@ -156,12 +156,12 @@ export default function SeguroFichaDrawer({
   const boletosDocs = documentos.filter((d) => (d.tipo || '').toLowerCase().includes('boleto') || (d.tipo || '').toLowerCase().includes('parcela'));
 
   // Cálculo da cobertura por unidade
-  const valorUnidade = apolice.coberturaPorUnidade || 300000;
-  const qtdUnidades = cond.quantidadeApartamentos || 10;
-  const totalIncendioCalculado = valorUnidade * qtdUnidades;
+  const coberturaUnidade = apolice.coberturaPorUnidade || 300000;
+  const qtdAptos = cond.quantidadeApartamentos ?? cond.quantidade_apartamentos ?? 10;
+  const coberturaTotalCalculada = coberturaUnidade * qtdAptos;
 
   // Montar lista de coberturas mesclando db ou padrões
-  const listaCoberturas = coberturasDb.length > 0 ? coberturasDb : COBERTURAS_PADRAO_EXIBICAO;
+  const coberturasExibicao = coberturasDb.length > 0 ? coberturasDb : COBERTURAS_PADRAO_EXIBICAO;
 
   const handleSalvarSinistro = async (e) => {
     e.preventDefault();
