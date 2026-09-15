@@ -195,7 +195,7 @@ export default function Dashboard() {
           </div>
 
           <div className="dash-2col">
-            <AttentionPanel servicos={servicosFiltrados} />
+            <AttentionPanel servicos={servicosFiltrados} tiposServico={tiposServico} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <ExpirationCalendar servicos={servicosFiltrados} />
               <CriticalCondominiums condominios={condominios} servicos={servicosFiltrados} />

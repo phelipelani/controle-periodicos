@@ -1,7 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { IcoSeta } from '../icons';
 
 export default function ExpirationCalendar({ servicos }) {
+  const navigate = useNavigate();
   const hoje = new Date();
   
   // Para simplificar o mock visual do calendário, vamos fixar no mês atual
@@ -57,7 +59,13 @@ export default function ExpirationCalendar({ servicos }) {
       </div>
       
       <div style={{ marginTop: '20px' }}>
-        <a href="#" style={{ fontSize: '13px', fontWeight: 600, color: '#2563eb' }}>Ver calendário completo →</a>
+        <button
+          type="button"
+          className="dash-link-btn"
+          onClick={() => navigate('/agendamentos')}
+        >
+          Ver agendamentos e calendário completo →
+        </button>
       </div>
     </div>
   );

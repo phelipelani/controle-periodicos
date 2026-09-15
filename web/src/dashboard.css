@@ -393,3 +393,171 @@
   height: 12px;
   border-radius: 50%;
 }
+
+/* Chips de Filtro por Serviço */
+.dash-attention-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  scrollbar-width: thin;
+}
+.dash-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.dash-chip:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+.dash-chip.active {
+  background: #d4202a;
+  color: #ffffff;
+  border-color: #d4202a;
+  box-shadow: 0 2px 6px rgba(212, 32, 42, 0.25);
+}
+.dash-chip-count {
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.dash-chip.active .dash-chip-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Subfiltros de Status */
+.dash-attention-subfilters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.dash-subchip {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.dash-subchip:hover {
+  background: #f8fafc;
+}
+.dash-subchip.active {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+.dash-subchip.vencido.active {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+.dash-subchip.avencer.active {
+  background: #d97706;
+  color: #ffffff;
+  border-color: #d97706;
+}
+.dash-attention-info {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Input de busca no AttentionPanel */
+.dash-attention-search {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+  min-width: 180px;
+  transition: border-color 0.15s;
+}
+.dash-attention-search:focus {
+  border-color: #d4202a;
+  box-shadow: 0 0 0 2px rgba(212, 32, 42, 0.1);
+}
+.dash-chip-clear {
+  background: #e2e8f0;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #475569;
+  cursor: pointer;
+}
+
+/* Links e Ações no AttentionPanel */
+.dash-condo-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-weight: 700;
+  font-size: 13px;
+  color: #0f172a;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s;
+}
+.dash-condo-link:hover {
+  color: #d4202a;
+  text-decoration: underline;
+}
+.dash-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2563eb;
+  cursor: pointer;
+  transition: color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.dash-link-btn:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+.dash-attention-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Modal Box */
+.dash-modal-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+}

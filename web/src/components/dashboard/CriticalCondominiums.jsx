@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function CriticalCondominiums({ condominios, servicos }) {
+  const navigate = useNavigate();
   const ranking = useMemo(() => {
     const list = condominios.map(c => {
       const srvs = servicos.filter(s => s.condominioId === c.id);
@@ -30,7 +32,13 @@ export default function CriticalCondominiums({ condominios, servicos }) {
           <div style={{ color: '#64748b', fontSize: '14px', textAlign: 'center', padding: '20px 0' }}>Nenhum condomínio em situação crítica.</div>
         ) : (
           ranking.map((c, i) => (
-            <div key={c.id} className="dash-ranking-item">
+            <div 
+              key={c.id} 
+              className="dash-ranking-item"
+              onClick={() => navigate(`/condominios/${c.id}`)}
+              style={{ cursor: 'pointer' }}
+              title={`Ver ficha de ${c.nome}`}
+            >
               <div className="dash-ranking-num">{i + 1}</div>
               <div className="dash-ranking-info">
                 <strong>{c.nome}</strong>
@@ -43,7 +51,13 @@ export default function CriticalCondominiums({ condominios, servicos }) {
       
       {ranking.length > 0 && (
         <div style={{ marginTop: '20px' }}>
-          <a href="#" style={{ fontSize: '13px', fontWeight: 600, color: '#2563eb' }}>Ver ranking completo →</a>
+          <button
+            type="button"
+            className="dash-link-btn"
+            onClick={() => navigate('/condominios')}
+          >
+            Ver todos os condomínios →
+          </button>
         </div>
       )}
     </div>
