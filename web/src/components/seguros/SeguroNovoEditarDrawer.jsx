@@ -55,6 +55,7 @@ export default function SeguroNovoEditarDrawer({
 
   // Form State - Cobertura por Unidade
   const [coberturaPorUnidade, setCoberturaPorUnidade] = useState(300000);
+  const [coberturas, setCoberturas] = useState([]);
 
   const [arquivoApolice, setArquivoApolice] = useState(null);
   const [arquivosBoletos, setArquivosBoletos] = useState([]);
@@ -173,6 +174,12 @@ export default function SeguroNovoEditarDrawer({
               if (res.documentos) {
                 setDocumentosExistentes(res.documentos);
               }
+
+              if (res.coberturas && Array.isArray(res.coberturas)) {
+                setCoberturas(res.coberturas);
+              } else {
+                setCoberturas([]);
+              }
             })
             .catch((e) => console.error('Erro ao carregar dados do seguro:', e));
         }
@@ -199,7 +206,7 @@ export default function SeguroNovoEditarDrawer({
         setNumeroApolice('');
         setEnderecoLocalSegurado('');
         setIdadeCondominio('Acima de 30 anos');
-        setQuantidadeAndares('6 a 10 Andares');
+        setQuantidadeAndares('2 a 5 Andares');
         setQuantidadeElevadores(1);
         setQuantidadeBlocos(1);
         setCategoriaRisco('Apenas Residencial');
@@ -207,12 +214,13 @@ export default function SeguroNovoEditarDrawer({
         setProdutoRamo('16 - Condomínio');
         setModalidade('Simples');
         setCondicoesGerais('04/2025');
-        setLimiteMaximoGarantia(5220000);
+        setLimiteMaximoGarantia(5000000);
         setVersaoTabela('34');
         setValorDeNovo(true);
         setVigenciaInicio('');
         setVigenciaFim('');
         setCoberturaPorUnidade(300000);
+        setCoberturas([]);
         setObservacoes('');
       }
     }
@@ -263,7 +271,7 @@ export default function SeguroNovoEditarDrawer({
         setQtdFuncionarios(c.quantidadeFuncionarios || 0);
         setGerenteId(String(c.gerenteId || ''));
         setIdadeCondominio(c.idadeCondominio || 'Acima de 30 anos');
-        setQuantidadeAndares(c.quantidadeAndares || '6 a 10 Andares');
+        setQuantidadeAndares(c.quantidadeAndares || '2 a 5 Andares');
         setQuantidadeElevadores(c.quantidadeElevadores != null ? c.quantidadeElevadores : 1);
         setQuantidadeBlocos(c.quantidadeBlocos != null ? c.quantidadeBlocos : 1);
 
@@ -277,6 +285,10 @@ export default function SeguroNovoEditarDrawer({
           setVigenciaFim(a.vigenciaFim || a.dataValidade || '');
           setCoberturaPorUnidade(a.coberturaPorUnidade || 300000);
           setObservacoes(a.observacoes || '');
+        }
+
+        if (res.coberturas && Array.isArray(res.coberturas)) {
+          setCoberturas(res.coberturas);
         }
 
         if (res.documentos) {
@@ -331,6 +343,7 @@ export default function SeguroNovoEditarDrawer({
         throw new Error(data.erro || 'Falha ao extrair dados do PDF.');
       }
 
+      // Dados do Seguro / Apólice
       if (data.seguradora) setSeguradora(data.seguradora);
       if (data.corretora) setCorretora(data.corretora);
       if (data.numero_apolice) setNumeroApolice(data.numero_apolice);
@@ -352,19 +365,81 @@ export default function SeguroNovoEditarDrawer({
       if (data.versao_tabela) setVersaoTabela(data.versao_tabela);
       if (data.valor_de_novo !== undefined) setValorDeNovo(data.valor_de_novo);
       if (data.endereco_local_segurado) setEnderecoLocalSegurado(data.endereco_local_segurado);
+
+      // Dados Cadastrais do Condomínio extraídos do PDF
       if (data.cnpj) setCnpj(data.cnpj);
+      if (data.email) setEmail(data.email);
+      if (data.telefone) setTelefone(data.telefone);
+      if (data.endereco_correspondencia) setEnderecoCorrespondencia(data.endereco_correspondencia);
+      if (data.bairro) setBairro(data.bairro);
+      if (data.cep) setCep(data.cep);
+      if (data.cidade) setCidade(data.cidade);
+      if (data.uf) setUf(data.uf);
+      if (data.quantidade_funcionarios !== undefined) setQtdFuncionarios(data.quantidade_funcionarios);
+
+      // Auto-selecionar condomínio se ainda não selecionado
+      if (!condominioId && (data.cnpj || data.nome_condominio)) {
+        const limpa = (s) => (s || '').replace(/\D/g, '');
+        const matched = todosCondominios.find((c) =>
+          (data.cnpj && limpa(c.cnpj) && limpa(c.cnpj) === limpa(data.cnpj)) ||
+          (data.nome_condominio && (c.condominio || c.nome || '').toLowerCase().includes(data.nome_condominio.toLowerCase()))
+        );
+        if (matched) {
+          setCondominioId(String(matched.id || matched.condominioId));
+        }
+      }
+
+      // Coberturas extraídas do PDF
+      if (Array.isArray(data.coberturas) && data.coberturas.length > 0) {
+        setCoberturas(data.coberturas);
+        const cobBasica = data.coberturas.find(
+          (c) => c.tipo === 'basica_simples' || (c.nome_personalizado && c.nome_personalizado.toLowerCase().includes('básica'))
+        );
+        const apts = Number(qtdApartamentos) || 10;
+        if (cobBasica && cobBasica.valor_segurado && apts > 0) {
+          setCoberturaPorUnidade(Math.round(cobBasica.valor_segurado / apts));
+        }
+      }
 
       const vigStr = data.vigencia_inicio
         ? `${data.vigencia_inicio.split('-').reverse().join('/')} até ${data.vigencia_fim ? data.vigencia_fim.split('-').reverse().join('/') : '—'}`
         : 'Detectada';
 
-      setSucessoExtracao(`Apólice analisada com sucesso (${data.paginasLidas || 1} pág.)! Seguradora: ${data.seguradora || 'Detectada'}, Corretora: ${data.corretora || 'Detectada'}, Vigência: ${vigStr}.`);
+      const qtdCobs = Array.isArray(data.coberturas) ? data.coberturas.length : 0;
+      setSucessoExtracao(`Apólice analisada com sucesso (${data.paginasLidas || 1} pág.)! Seguradora: ${data.seguradora || 'Detectada'}, Corretora: ${data.corretora || 'Detectada'}, Vigência: ${vigStr}, ${qtdCobs} coberturas extraídas.`);
     } catch (err) {
       setErro(err.message || 'Erro ao processar arquivo PDF da apólice.');
     } finally {
       setExtraindoPDF(false);
       setArrastando(false);
     }
+  };
+
+  const handleUpdateCobertura = (idx, field, value) => {
+    setCoberturas((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], [field]: value };
+      return next;
+    });
+  };
+
+  const handleRemoverCobertura = (idx) => {
+    setCoberturas((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleAdicionarCobertura = () => {
+    setCoberturas((prev) => [
+      ...prev,
+      {
+        tipo: 'outra',
+        nome_personalizado: 'Nova Cobertura',
+        valor_segurado: 50000,
+        preco_cobertura: 0,
+        franquia_percentual: 10,
+        franquia_reais: 1000,
+        sem_franquia: 0
+      }
+    ]);
   };
 
   const handleDragOver = (e) => {
@@ -399,6 +474,37 @@ export default function SeguroNovoEditarDrawer({
 
     setSalvando(true);
     setErro('');
+
+    let finalCoberturas = [];
+    if (coberturas && coberturas.length > 0) {
+      finalCoberturas = coberturas.map((c) => {
+        const isBasica = c.tipo === 'basica_simples' || (c.nome_personalizado && c.nome_personalizado.toLowerCase().includes('básica'));
+        if (isBasica) {
+          const valorCalc = (Number(coberturaPorUnidade) || 0) * (Number(qtdApartamentos) || 0) || c.valor_segurado || c.valor_total_calculado || 0;
+          return {
+            ...c,
+            valor_por_imovel: Number(coberturaPorUnidade) || c.valor_por_imovel || 0,
+            quantidade_imoveis: Number(qtdApartamentos) || c.quantidade_imoveis || 0,
+            valor_total_calculado: valorCalc,
+            valor_segurado: valorCalc
+          };
+        }
+        return c;
+      });
+    } else {
+      finalCoberturas = [
+        {
+          tipo: 'basica_simples',
+          nome_personalizado: 'Básica Simples (Incêndio)',
+          valor_por_imovel: Number(coberturaPorUnidade) || 0,
+          quantidade_imoveis: Number(qtdApartamentos) || 0,
+          valor_total_calculado: totalIncendioCalculado,
+          valor_segurado: totalIncendioCalculado,
+          preco_cobertura: 338.40,
+          sem_franquia: 1
+        }
+      ];
+    }
 
     const payload = {
       condominio_id: Number(condominioId),
@@ -444,63 +550,7 @@ export default function SeguroNovoEditarDrawer({
         cobertura_por_unidade: Number(coberturaPorUnidade) || 300000,
         observacoes
       },
-      coberturas: [
-        {
-          tipo: 'basica_simples',
-          nome_personalizado: 'Básica Simples (Incêndio)',
-          valor_por_imovel: Number(coberturaPorUnidade) || 0,
-          quantidade_imoveis: Number(qtdApartamentos) || 0,
-          valor_total_calculado: totalIncendioCalculado,
-          preco_cobertura: 338.40,
-          sem_franquia: 1
-        },
-        {
-          tipo: 'danos_eletricos',
-          nome_personalizado: 'Danos Elétricos',
-          valor_segurado: 30000,
-          preco_cobertura: 792.97,
-          franquia_percentual: 20,
-          franquia_reais: 4000
-        },
-        {
-          tipo: 'desmoronamento',
-          nome_personalizado: 'Desmoronamento',
-          valor_segurado: 100000,
-          preco_cobertura: 136.26,
-          franquia_percentual: 20,
-          franquia_reais: 3000
-        },
-        {
-          tipo: 'impacto_veiculos',
-          nome_personalizado: 'Impacto de Veículos',
-          valor_segurado: 50000,
-          preco_cobertura: 55.92,
-          franquia_percentual: 15,
-          franquia_reais: 1000
-        },
-        {
-          tipo: 'incendio_bens',
-          nome_personalizado: 'Incêndio de Bens de Condôminos',
-          valor_segurado: 900000,
-          preco_cobertura: 158.10,
-          sem_franquia: 1
-        },
-        {
-          tipo: 'perda_aluguel',
-          nome_personalizado: 'Perda/Pagamento Aluguel p/Condôminos',
-          valor_segurado: 50000,
-          preco_cobertura: 11.94,
-          sem_franquia: 1
-        },
-        {
-          tipo: 'quebra_vidros',
-          nome_personalizado: 'Quebra de Vidros/Anúncios Luminosos',
-          valor_segurado: 5000,
-          preco_cobertura: 73.74,
-          franquia_percentual: 10,
-          franquia_reais: 500
-        }
-      ]
+      coberturas: finalCoberturas
     };
 
     try {
@@ -765,15 +815,20 @@ export default function SeguroNovoEditarDrawer({
                 </div>
                 <div className="seg-filter-group">
                   <label>Corretora *</label>
-                  <select
+                  <input
+                    type="text"
+                    list="lista-corretoras"
                     className="seg-input"
-                    value={corretora || 'Setor Seguros'}
+                    placeholder="Ex: CARAGUA SEG CORRETORA, Setor Seguros..."
+                    value={corretora}
                     onChange={(e) => setCorretora(e.target.value)}
                     required
-                  >
-                    <option value="Setor Seguros">Setor Seguros</option>
-                    <option value="Síndico">Síndico</option>
-                  </select>
+                  />
+                  <datalist id="lista-corretoras">
+                    <option value="Setor Seguros" />
+                    <option value="Síndico" />
+                    <option value="CARAGUA SEG CORRETORA DE SEGUROS LTDA" />
+                  </datalist>
                 </div>
               </div>
 
@@ -1018,8 +1073,18 @@ export default function SeguroNovoEditarDrawer({
           {/* 3. COBERTURAS COM MULTIPLICAÇÃO AUTOMÁTICA */}
           {abaAtiva === 'coberturas' && (
             <div className="seg-card-section">
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Configuração de Cobertura por Unidade
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Configuração de Coberturas & Valores {coberturas.length > 0 ? `(${coberturas.length} coberturas)` : ''}
+                </div>
+                <button
+                  type="button"
+                  className="seg-btn-outline"
+                  style={{ padding: '4px 10px', fontSize: '12px' }}
+                  onClick={handleAdicionarCobertura}
+                >
+                  + Adicionar Cobertura
+                </button>
               </div>
 
               <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1031,7 +1096,25 @@ export default function SeguroNovoEditarDrawer({
                       step="1000"
                       className="seg-input"
                       value={coberturaPorUnidade}
-                      onChange={(e) => setCoberturaPorUnidade(e.target.value)}
+                      onChange={(e) => {
+                        const val = Number(e.target.value) || 0;
+                        setCoberturaPorUnidade(val);
+                        setCoberturas((prev) =>
+                          prev.map((c) => {
+                            if (c.tipo === 'basica_simples' || (c.nome_personalizado && c.nome_personalizado.toLowerCase().includes('básica'))) {
+                              const apts = Number(qtdApartamentos) || 0;
+                              return {
+                                ...c,
+                                valor_por_imovel: val,
+                                quantidade_imoveis: apts,
+                                valor_segurado: val * apts,
+                                valor_total_calculado: val * apts
+                              };
+                            }
+                            return c;
+                          })
+                        );
+                      }}
                       required
                     />
                     <span style={{ fontSize: '12px', color: '#0284c7', fontWeight: 600, marginTop: '2px' }}>
@@ -1045,7 +1128,25 @@ export default function SeguroNovoEditarDrawer({
                       type="number"
                       className="seg-input"
                       value={qtdApartamentos}
-                      onChange={(e) => setQtdApartamentos(e.target.value)}
+                      onChange={(e) => {
+                        const apts = Number(e.target.value) || 0;
+                        setQtdApartamentos(apts);
+                        setCoberturas((prev) =>
+                          prev.map((c) => {
+                            if (c.tipo === 'basica_simples' || (c.nome_personalizado && c.nome_personalizado.toLowerCase().includes('básica'))) {
+                              const unitVal = Number(coberturaPorUnidade) || 0;
+                              return {
+                                ...c,
+                                valor_por_imovel: unitVal,
+                                quantidade_imoveis: apts,
+                                valor_segurado: unitVal * apts,
+                                valor_total_calculado: unitVal * apts
+                              };
+                            }
+                            return c;
+                          })
+                        );
+                      }}
                       disabled={!podeEditarCadastrais}
                     />
                   </div>
@@ -1063,6 +1164,102 @@ export default function SeguroNovoEditarDrawer({
                   </span>
                 </div>
               </div>
+
+              {/* Tabela de Todas as Coberturas */}
+              {coberturas.length > 0 && (
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', marginBottom: '8px' }}>
+                    Tabela de Coberturas da Apólice ({coberturas.length} itens):
+                  </div>
+                  <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#0f172a' }}>
+                          <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700 }}>COBERTURA</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, minWidth: '130px' }}>LMI (R$)</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, minWidth: '100px' }}>Preço (R$)</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, minWidth: '80px' }}>Franquia %</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, minWidth: '100px' }}>Franquia R$</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'center', width: '36px' }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {coberturas.map((cob, idx) => {
+                          const isBasica = cob.tipo === 'basica_simples' || (cob.nome_personalizado && cob.nome_personalizado.toLowerCase().includes('básica'));
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+                              <td style={{ padding: '6px 10px' }}>
+                                <input
+                                  type="text"
+                                  className="seg-input"
+                                  style={{ padding: '4px 8px', fontSize: '12px', fontWeight: isBasica ? 700 : 500 }}
+                                  value={cob.nome_personalizado || cob.nome || cob.tipo || ''}
+                                  onChange={(e) => handleUpdateCobertura(idx, 'nome_personalizado', e.target.value)}
+                                />
+                              </td>
+                              <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                                <input
+                                  type="number"
+                                  className="seg-input"
+                                  style={{ padding: '4px 8px', fontSize: '12px', textAlign: 'right', fontWeight: 700, color: isBasica ? '#16a34a' : 'inherit' }}
+                                  value={cob.valor_segurado ?? cob.valor_total_calculado ?? cob.limite ?? 0}
+                                  onChange={(e) => {
+                                    const v = Number(e.target.value) || 0;
+                                    handleUpdateCobertura(idx, 'valor_segurado', v);
+                                    handleUpdateCobertura(idx, 'valor_total_calculado', v);
+                                  }}
+                                />
+                              </td>
+                              <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  className="seg-input"
+                                  style={{ padding: '4px 8px', fontSize: '12px', textAlign: 'right' }}
+                                  value={cob.preco_cobertura ?? cob.premio ?? cob.preco ?? ''}
+                                  onChange={(e) => handleUpdateCobertura(idx, 'preco_cobertura', parseFloat(e.target.value) || 0)}
+                                />
+                              </td>
+                              <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                                <input
+                                  type="number"
+                                  className="seg-input"
+                                  style={{ padding: '4px 8px', fontSize: '12px', textAlign: 'center' }}
+                                  placeholder="-"
+                                  value={cob.franquia_percentual ?? cob.franquia_pct ?? ''}
+                                  onChange={(e) => handleUpdateCobertura(idx, 'franquia_percentual', e.target.value ? Number(e.target.value) : null)}
+                                />
+                              </td>
+                              <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  className="seg-input"
+                                  style={{ padding: '4px 8px', fontSize: '12px', textAlign: 'right' }}
+                                  placeholder={cob.sem_franquia ? 'Sem Franquia' : '-'}
+                                  value={cob.franquia_reais ?? cob.franquia_rs ?? ''}
+                                  onChange={(e) => handleUpdateCobertura(idx, 'franquia_reais', e.target.value ? Number(e.target.value) : null)}
+                                />
+                              </td>
+                              <td style={{ padding: '6px 6px', textAlign: 'center' }}>
+                                <button
+                                  type="button"
+                                  className="seg-btn-icon"
+                                  style={{ color: '#dc2626', width: '24px', height: '24px', fontSize: '14px', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                                  onClick={() => handleRemoverCobertura(idx)}
+                                  title="Remover cobertura"
+                                >
+                                  &times;
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

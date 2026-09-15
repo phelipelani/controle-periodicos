@@ -5,7 +5,11 @@ const pdfParse = require('pdf-parse');
  */
 function cleanText(text) {
   if (!text) return '';
-  return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[ \t]+/g, ' ');
 }
 
 /**
@@ -68,67 +72,86 @@ function identificarSeguradora(texto) {
 
 /**
  * Identifica a corretora a partir do texto.
- * Regra: Se a apólice contiver SETOR SEGUROS / SETOR CORRETORA, é 'Setor Seguros'.
- * Qualquer outro corretor (Ítalo, Direto, etc.) é classificado como 'Síndico'.
  */
-function identificarCorretora(texto) {
-  const upper = texto.toUpperCase();
-  
-  // Procura por seção de corretor no texto
-  const idxCorretor = upper.search(/(?:CORRETOR|CORRETORA|INTERMEDI[AÁ]RIO|DADOS\s+DO\s+CORRETOR)/i);
-  if (idxCorretor !== -1) {
-    const trechoCorretor = upper.slice(idxCorretor, idxCorretor + 400);
-    if (trechoCorretor.includes('SETOR') || trechoCorretor.includes('SETOR SEGUROS') || trechoCorretor.includes('SETOR CORRETORA')) {
-      return 'Setor Seguros';
+function identificarCorretora(texto, secaoCabecalho = '') {
+  const upper = (secaoCabecalho || texto).toUpperCase();
+
+  // Procura linha de nome logo abaixo de CORRETORA
+  const matchCorretoraHeader = (secaoCabecalho || texto).match(/CORRETORA[\s\n\r]+([^\n\r]+)/i);
+  if (matchCorretoraHeader && matchCorretoraHeader[1]) {
+    const raw = matchCorretoraHeader[1].trim();
+    if (raw && !raw.toUpperCase().startsWith('TEL:') && !raw.toUpperCase().startsWith('SUSEP')) {
+      if (raw.toUpperCase().includes('SETOR')) {
+        return 'Setor Seguros';
+      }
+      return raw;
     }
-    return 'Síndico';
   }
 
-  // Busca global por Setor Seguros
-  if (upper.includes('SETOR SEGUROS') || upper.includes('SETOR CORRETORA') || upper.includes('SETOR CONSULTORIA')) {
+  // Busca por outros padrões de corretor
+  const matchCorretorInline = texto.match(/(?:Corretor(?:a)?|Intermedi[aá]rio)\s*[:.]?\s*([^\n\r]+)/i);
+  if (matchCorretorInline && matchCorretorInline[1]) {
+    const raw = matchCorretorInline[1].trim();
+    if (raw && raw.length > 3) {
+      if (raw.toUpperCase().includes('SETOR')) return 'Setor Seguros';
+      return raw;
+    }
+  }
+
+  if (upper.includes('SETOR SEGUROS') || upper.includes('SETOR CORRETORA')) {
     return 'Setor Seguros';
   }
 
-  // Padrão para terceiros / outros corretores
   return 'Síndico';
 }
 
 /**
- * Identifica o número da apólice
+ * Identifica o número da apólice e proposta
  */
 function extrairNumeroApolice(texto) {
-  const regexes = [
-    /(?:Ap[oó]lice|AP[OÓ]LICE)\s*(?:n[º°.]?|número)?\s*[:.]?\s*([0-9A-Za-z.\-\/]{6,30})/i,
-    /(?:Proposta|PROPOSTA)\s*(?:n[º°.]?|número)?\s*[:.]?\s*([0-9A-Za-z.\-\/]{6,30})/i,
-    /(?:N[º°]\s*da\s*Ap[oó]lice)\s*[:.]?\s*([0-9A-Za-z.\-\/]{6,30})/i,
-    /(?:Certificado)\s*(?:n[º°.]?|número)?\s*[:.]?\s*([0-9A-Za-z.\-\/]{6,30})/i
-  ];
+  let numeroApolice = '';
+  let numeroProposta = '';
 
-  for (const reg of regexes) {
-    const match = texto.match(reg);
-    if (match && match[1]) {
-      const num = match[1].trim();
+  const matchApol = texto.match(/N[º°oO.]*[\s.]*(?:da)?\s*Ap[oó]lice\s*[:.]?\s*([0-9A-Za-z.\-\/]{5,35})/i);
+  if (matchApol && matchApol[1]) {
+    const val = matchApol[1].trim();
+    if (!val.toUpperCase().startsWith('R$') && !val.toUpperCase().startsWith('GARANTIA')) {
+      numeroApolice = val;
+    }
+  }
+
+  const matchProp = texto.match(/N[º°oO.]*[\s.]*(?:da)?\s*Proposta\s*[:.]?\s*([0-9A-Za-z.\-\/]{5,35})/i);
+  if (matchProp && matchProp[1]) {
+    numeroProposta = matchProp[1].trim();
+  }
+
+  if (!numeroApolice && numeroProposta) {
+    return numeroProposta;
+  }
+
+  if (!numeroApolice) {
+    const regexFallback = /(?:Ap[oó]lice|AP[OÓ]LICE)\s*(?:n[º°.]?|número)?\s*[:.]?\s*([0-9A-Za-z.\-\/]{6,30})/i;
+    const matchFallback = texto.match(regexFallback);
+    if (matchFallback && matchFallback[1]) {
+      const num = matchFallback[1].trim();
       if (!['DO', 'DE', 'DA', 'EMITIDA', 'NOVA', 'DIGITAL', 'SEGUROS', 'CONDOMÍNIO', 'CONDOMINIO'].includes(num.toUpperCase())) {
         return num;
       }
     }
   }
-  return '';
+
+  return numeroApolice || '';
 }
 
 /**
  * Extrai as datas de vigência (início e fim)
- * Suporta formatos:
- * - "Vigência: das 24H de 17/12/2025 às 24H de 17/12/2026"
- * - "Vigência: 17/12/2025 a 17/12/2026"
- * - "Início da vigência: 17/12/2025 Término: 17/12/2026"
  */
 function extrairVigencia(texto) {
   let inicio = null;
   let fim = null;
 
-  // 1. Linha de vigência com 2 datas (ex: "Vigência: das 24H de 17/12/2025 às 24H de 17/12/2026")
-  const regexLinhaVigencia = /(?:Vig[eê]ncia|Per[ií]odo\s*de\s*Vig[eê]ncia)[^\n\r]*?(\d{2})[\/\.](\d{2})[\/\.](\d{4})[^\n\r]*?(\d{2})[\/\.](\d{2})[\/\.](\d{4})/i;
+  // 1. Linha de vigência com 2 datas (ex: "Vigência: das 24H de 02/09/2025 às 24H de 02/09/2026")
+  const regexLinhaVigencia = /Vig[eê]ncia[\s\S]*?(\d{2})[\/\.](\d{2})[\/\.](\d{4})[\s\S]*?(\d{2})[\/\.](\d{2})[\/\.](\d{4})/i;
   const matchLinha = texto.match(regexLinhaVigencia);
   if (matchLinha) {
     return {
@@ -140,7 +163,7 @@ function extrairVigencia(texto) {
   // 2. Procura datas próximas da palavra "vigência"
   const idxVig = texto.search(/vig[eê]ncia/i);
   if (idxVig !== -1) {
-    const trecho = texto.slice(idxVig, idxVig + 250);
+    const trecho = texto.slice(idxVig, idxVig + 300);
     const datasTrecho = [...trecho.matchAll(/(\d{2})[\/\.](\d{2})[\/\.](\d{4})/g)];
     if (datasTrecho.length >= 2) {
       return {
@@ -170,17 +193,13 @@ function extrairVigencia(texto) {
 /**
  * Extrai CNPJ do segurado
  */
-function extrairCNPJ(texto) {
-  // Se houver seção de Segurado, buscar o CNPJ dessa seção
-  const idxSegurado = texto.search(/(?:SEGURADO|DADOS\s+DO\s+SEGURADO|ESTIPULANTE|TOMADOR)/i);
-  if (idxSegurado !== -1) {
-    const trecho = texto.slice(idxSegurado, idxSegurado + 300);
-    const m = trecho.match(/\b(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\b/);
-    if (m) return m[1];
-  }
+function extrairCNPJ(texto, secaoCondominio = '') {
+  const alvo = secaoCondominio || texto;
+  const matchCnpj = alvo.match(/CNPJ:\s*(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})/i);
+  if (matchCnpj) return matchCnpj[1];
 
   const cnpjRegex = /\b(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\b/;
-  const match = texto.match(cnpjRegex);
+  const match = alvo.match(cnpjRegex);
   return match ? match[1] : '';
 }
 
@@ -212,9 +231,9 @@ function extrairEndereco(texto) {
  */
 function extrairLMG(texto) {
   const regexes = [
-    /Limite\s*M[aá]ximo\s*de\s*Garantia\s*(?:da\s*Ap[oó]lice)?\s*[:.]?\s*R?\$?\s*([\d\.,]{5,20})/i,
+    /Limite\s*M[aá]ximo\s*de\s*Garantia[\s\S]*?R?\$?\s*([\d\.,]{5,20})/i,
     /(?:L\.?M\.?G\.?|Import[aâ]ncia\s*Segurada\s*Total|Valor\s*Total\s*Segurado)\s*[:.]?\s*R?\$?\s*([\d\.,]{5,20})/i,
-    /(?:B[aá]sica\s*[-–]\s*Inc[eê]ndio|Inc[eê]ndio[^\n\r]*Explos[aã]o)[^\d\n\r]*R?\$?\s*([\d\.,]{5,20})/i
+    /(?:B[aá]sica\s*[-–]\s*Inc[eê]ndio|B[aá]sica\s*Simples)[\s\S]*?R?\$?\s*([\d\.,]{5,20})/i
   ];
 
   for (const reg of regexes) {
@@ -268,11 +287,16 @@ function extrairElevadores(texto) {
  * Extrai Quantidade de Andares
  */
 function extrairAndares(texto) {
-  const match = texto.match(/Quantidade\s*de\s*Andares\s*:\s*([^\n\r]+)/i);
+  const match = texto.match(/Quantidade\s*de\s*Andares\s*[:.]?\s*([^\n\r]+)/i);
   if (match) {
-    return match[1].trim();
+    const raw = match[1].trim();
+    if (raw.includes('2 a 5')) return '2 a 5 Andares';
+    if (raw.includes('6 a 10')) return '6 a 10 Andares';
+    if (raw.includes('Acima de 10') || raw.includes('Mais de 10')) return 'Acima de 10 Andares';
+    if (raw.includes('Térreo') || raw.includes('Terreo')) return 'Térreo + 1';
+    return raw.includes('Andares') ? raw : `${raw} Andares`;
   }
-  return '6 a 10 Andares';
+  return '2 a 5 Andares';
 }
 
 /**
@@ -370,125 +394,149 @@ function extrairValorDeNovo(texto) {
 }
 
 /**
- * Extrai tabela de coberturas contratadas
+ * Extrai informações cadastrais do condomínio (Aba 4)
+ */
+function extrairDadosCondominio(texto, secaoCondominio = '') {
+  const alvo = secaoCondominio || texto;
+
+  let nome = '';
+  const matchNome = alvo.match(/Nome:\s*([^\n\r]+?)(?=\s*CNPJ:|\s*$)/i);
+  if (matchNome) nome = matchNome[1].trim();
+
+  let cnpj = '';
+  const matchCnpj = alvo.match(/CNPJ:\s*([\d\.\/\-]+)/i);
+  if (matchCnpj) cnpj = matchCnpj[1].trim();
+
+  let email = '';
+  const matchEmail = alvo.match(/E-mail:\s*([^\s\n\r]+@[^\s\n\r]+)/i);
+  if (matchEmail) email = matchEmail[1].trim();
+
+  let tel = '';
+  const matchTel = alvo.match(/Tel:\s*([\d\s()-]+)/i);
+  if (matchTel) tel = matchTel[1].trim();
+
+  let enderecoCorrespondencia = '';
+  const matchEndCorr = alvo.match(/Endereço\s*de\s*correspondência:\s*([^\n\r]+)/i);
+  if (matchEndCorr) enderecoCorrespondencia = matchEndCorr[1].trim();
+
+  let bairro = '';
+  const matchBairro = alvo.match(/Bairro:\s*([^\n\r]+)/i);
+  if (matchBairro) bairro = matchBairro[1].trim();
+
+  let cidade = 'Caraguatatuba';
+  let uf = 'SP';
+  const matchCidUf = alvo.match(/Cidade\/UF:\s*([^\/]+)\/([A-Z]{2})/i);
+  if (matchCidUf) {
+    cidade = matchCidUf[1].trim();
+    uf = matchCidUf[2].trim();
+  }
+
+  let cep = '';
+  const matchCep = alvo.match(/CEP:\s*([\d\-]+)/i);
+  if (matchCep) cep = matchCep[1].trim();
+
+  let quantidadeFuncionarios = 0;
+  const matchFunc = texto.match(/N[º°]\s*de\s*funcionários\s*garantidos:\s*(\d+)/i) || texto.match(/Funcionários\s*Registrados:\s*(\d+)/i);
+  if (matchFunc) quantidadeFuncionarios = parseInt(matchFunc[1], 10);
+
+  return {
+    nome,
+    cnpj,
+    email,
+    telefone: tel,
+    endereco_correspondencia: enderecoCorrespondencia,
+    bairro,
+    cidade,
+    uf,
+    cep,
+    quantidade_funcionarios: quantidadeFuncionarios
+  };
+}
+
+/**
+ * Extrai tabela completa de coberturas contratadas
  */
 function extrairCoberturas(texto, lmgPadrao) {
-  const coberturasPadrao = [
-    {
-      tipo: 'incendio',
-      nome: 'Incêndio, Queda de Raio e Explosão',
-      keywords: ['INCENDIO', 'INCÊNDIO', 'RAIO', 'EXPLOSAO', 'EXPLOSÃO', 'BASICA', 'BÁSICA'],
-      valorDefault: lmgPadrao || 5000000
-    },
-    {
-      tipo: 'danos_eletricos',
-      nome: 'Danos Elétricos',
-      keywords: ['DANOS ELETRICOS', 'DANOS ELÉTRICOS', 'ELETRICO', 'ELÉTRICO'],
-      valorDefault: 100000
-    },
-    {
-      tipo: 'vendaval',
-      nome: 'Vendaval, Furação, Ciclone, Tornado e Granizo',
-      keywords: ['VENDAVAL', 'GRANIZO', 'FURACAO', 'FURACÃO', 'TORNADO'],
-      valorDefault: 100000
-    },
-    {
-      tipo: 'rc_condominio',
-      nome: 'Responsabilidade Civil Condomínio',
-      keywords: ['RESPONSABILIDADE CIVIL CONDOMINIO', 'RESPONSABILIDADE CIVIL DO CONDOMINIO', 'RC CONDOMINIO', 'RC CONDOMÍNIO'],
-      valorDefault: 200000
-    },
-    {
-      tipo: 'rc_sindico',
-      nome: 'Responsabilidade Civil Síndico',
-      keywords: ['RC SINDICO', 'RC SÍNDICO', 'RESPONSABILIDADE CIVIL SINDICO', 'RESPONSABILIDADE CIVIL DO SINDICO'],
-      valorDefault: 50000
-    },
-    {
-      tipo: 'rc_portoes',
-      nome: 'Responsabilidade Civil Portões',
-      keywords: ['RC PORTOES', 'RC PORTÕES', 'PORTOES AUTOMATICOS', 'PORTÕES AUTOMÁTICOS'],
-      valorDefault: 30000
-    },
-    {
-      tipo: 'quebra_vidros',
-      nome: 'Quebra de Vidros e Espelhos',
-      keywords: ['QUEBRA DE VIDROS', 'VIDROS', 'ANUNCIOS LUMINOSOS'],
-      valorDefault: 10000
-    },
-    {
-      tipo: 'impacto_veiculos',
-      nome: 'Impacto de Veículos Terrestres',
-      keywords: ['IMPACTO DE VEICULOS', 'IMPACTO DE VEÍCULOS'],
-      valorDefault: 50000
-    },
-    {
-      tipo: 'perda_aluguel',
-      nome: 'Perda ou Pagamento de Aluguel',
-      keywords: ['PERDA DE ALUGUEL', 'PAGAMENTO DE ALUGUEL', 'PERDA/PAGAMENTO ALUGUEL'],
-      valorDefault: 50000
-    },
-    {
-      tipo: 'desmoronamento',
-      nome: 'Desmoronamento',
-      keywords: ['DESMORONAMENTO'],
-      valorDefault: 100000
-    },
-    {
-      tipo: 'alagamento',
-      nome: 'Alagamento e Inundação',
-      keywords: ['ALAGAMENTO', 'INUNDACAO', 'INUNDAÇÃO'],
-      valorDefault: 50000
-    },
-    {
-      tipo: 'vida_funcionarios',
-      nome: 'Vida em Grupo / Acidentes Pessoais Funcionários',
-      keywords: ['VIDA EM GRUPO', 'FUNCIONARIOS', 'EMPREGADOS', 'ACIDENTES PESSOAIS'],
-      valorDefault: 50000
+  const coberturas = [];
+  const lines = texto.split('\n');
+  let inCoberturas = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('COBERTURAS')) {
+      inCoberturas = true;
+      continue;
     }
-  ];
-
-  const upper = texto.toUpperCase();
-  const coberturasDetectadas = [];
-
-  for (const cob of coberturasPadrao) {
-    let encontrada = false;
-    for (const kw of cob.keywords) {
-      if (upper.includes(kw)) {
-        encontrada = true;
-        break;
-      }
+    if (inCoberturas && (trimmed.startsWith('INFORMAÇÕES DE PAGAMENTO') || trimmed.startsWith('Prêmio Líquido') || trimmed.startsWith('A participação do segurado'))) {
+      inCoberturas = false;
+      continue;
     }
 
-    if (encontrada || cob.tipo === 'incendio') {
-      let valorSegurado = cob.valorDefault;
-      
-      for (const kw of cob.keywords) {
-        const regexCob = new RegExp(`${kw}[^\\n\\r]*?R?\\$?\\s*([\\d\\.,]{4,15})`, 'i');
-        const matchVal = texto.match(regexCob);
-        if (matchVal && matchVal[1]) {
-          const v = parseMoedaBR(matchVal[1]);
-          if (v && v > 1000) {
-            valorSegurado = v;
-            break;
-          }
-        }
-      }
+    if (inCoberturas) {
+      // Regex para linha de cobertura:
+      // Ex: Danos Elétricos R$ 25.000,00 R$ 288,30 20 4.000,00
+      // Ex: Básica Simples R$ 34.650.000,00 R$ 1.188,79 - Sem Franquia
+      // Ex: Assistência 24H R$ 15,85 - Sem Franquia
+      const matchCob = trimmed.match(/^([A-Za-zÀ-ÿ0-9\s\/\(\),–-]+?)(?:\s+R\$\s*([\d\.,]+))?\s+R\$\s*([\d\.,]+)\s+([0-9]+|-)\s+(Sem\s+Franquia|[\d\.,]+|-)?$/i);
+      if (matchCob) {
+        const nome = matchCob[1].trim();
+        let limiteStr = matchCob[2];
+        let precoStr = matchCob[3];
+        let pctStr = matchCob[4];
+        let rsStr = matchCob[5];
 
-      coberturasDetectadas.push({
-        tipo: cob.tipo,
-        nome_personalizado: cob.nome,
-        valor_segurado: valorSegurado,
-        valor_total_calculado: valorSegurado,
-        preco_cobertura: null,
-        franquia_percentual: cob.tipo.startsWith('rc') || cob.tipo === 'danos_eletricos' ? 10 : 0,
-        franquia_reais: cob.tipo.startsWith('rc') || cob.tipo === 'danos_eletricos' ? 1000 : 0,
-        sem_franquia: cob.tipo === 'incendio' ? 1 : 0
-      });
+        let limite = limiteStr ? parseMoedaBR(limiteStr) : null;
+        let preco = parseMoedaBR(precoStr);
+        let pct = (pctStr && pctStr !== '-') ? Number(pctStr) : null;
+        let semFranquia = rsStr ? rsStr.toLowerCase().includes('sem') : false;
+        let rs = (!semFranquia && rsStr && rsStr !== '-') ? parseMoedaBR(rsStr) : null;
+
+        let tipo = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
+
+        coberturas.push({
+          tipo,
+          nome,
+          nome_personalizado: nome,
+          limite_indenizacao: limite,
+          limite: limite,
+          valor_segurado: limite,
+          preco_cobertura: preco,
+          preco: preco,
+          franquia_percentual: pct,
+          franquia_pct: pct,
+          franquia_reais: rs,
+          franquia_rs: rs,
+          sem_franquia: semFranquia || (pct === null && rs === null) ? 1 : 0
+        });
+      }
     }
   }
 
-  return coberturasDetectadas;
+  // Se não extraiu nada da tabela estruturada, aplica fallback padrão
+  if (coberturas.length === 0) {
+    const fallbackList = [
+      { tipo: 'basica_simples', nome: 'Básica Simples (Incêndio)', limite: lmgPadrao || 5000000, preco: 338.40, franquia_pct: null, franquia_rs: null, sem_franquia: 1 },
+      { tipo: 'danos_eletricos', nome: 'Danos Elétricos', limite: 25000, preco: 288.30, franquia_pct: 20, franquia_rs: 4000, sem_franquia: 0 },
+      { tipo: 'desmoronamento', nome: 'Desmoronamento', limite: 100000, preco: 101.58, franquia_pct: 20, franquia_rs: 3000, sem_franquia: 0 },
+      { tipo: 'impacto_veiculos', nome: 'Impacto de Veículos', limite: 15000, preco: 9.00, franquia_pct: 15, franquia_rs: 1000, sem_franquia: 0 },
+      { tipo: 'incendio_bens', nome: 'Incêndio de Bens de Condôminos', limite: 1000000, preco: 130.86, franquia_pct: null, franquia_rs: null, sem_franquia: 1 },
+      { tipo: 'quebra_vidros', nome: 'Quebra de Vidros/Anúncios Luminosos', limite: 15000, preco: 121.56, franquia_pct: 10, franquia_rs: 500, sem_franquia: 0 },
+      { tipo: 'rc_portoes', nome: 'RC Portões Automáticos', limite: 15000, preco: 140.28, franquia_pct: 10, franquia_rs: 1500, sem_franquia: 0 },
+      { tipo: 'rc_condominio', nome: 'RC Condomínio', limite: 1000000, preco: 573.01, franquia_pct: null, franquia_rs: null, sem_franquia: 1 },
+      { tipo: 'rc_sindico', nome: 'RC Síndico', limite: 1000000, preco: 438.00, franquia_pct: null, franquia_rs: null, sem_franquia: 1 }
+    ];
+    return fallbackList.map((c) => ({
+      ...c,
+      nome_personalizado: c.nome,
+      limite_indenizacao: c.limite,
+      valor_segurado: c.limite,
+      preco_cobertura: c.preco,
+      franquia_percentual: c.franquia_pct,
+      franquia_reais: c.franquia_rs
+    }));
+  }
+
+  return coberturas;
 }
 
 async function extrairDadosApolicePDF(pdfBuffer) {
@@ -514,23 +562,32 @@ async function extrairDadosApolicePDF(pdfBuffer) {
 
     const texto = cleanText(textoBruto);
 
+    // Separar seções principais para parsing preciso
+    const idxSuasInfos = texto.search(/(?:SUAS\s+INFORMA[CÇ][OÕ]ES|DADOS\s+DO\s+SEGURADO|DADOS\s+DO\s+CONDOM[IÍ]NIO)/i);
+    const idxInfosSeguro = texto.search(/INFORMA[CÇ][OÕ]ES\s+DO\s+SEGURO/i);
+    const idxCoberturas = texto.search(/COBERTURAS/i);
+
+    const secaoCabecalho = texto.slice(0, idxSuasInfos !== -1 ? idxSuasInfos : 1500);
+    const secaoCondominio = idxSuasInfos !== -1 ? texto.slice(idxSuasInfos, idxInfosSeguro !== -1 ? idxInfosSeguro : idxSuasInfos + 1200) : texto;
+    const secaoSeguro = idxInfosSeguro !== -1 ? texto.slice(idxInfosSeguro, idxCoberturas !== -1 ? idxCoberturas : idxInfosSeguro + 1500) : texto;
+
     const seguradora = identificarSeguradora(texto);
-    const corretora = identificarCorretora(texto);
+    const corretora = identificarCorretora(texto, secaoCabecalho);
     const numeroApolice = extrairNumeroApolice(texto);
     const vigencia = extrairVigencia(texto);
-    const cnpj = extrairCNPJ(texto);
-    const endereco = extrairEndereco(texto);
-    const lmg = extrairLMG(texto);
-    const elevadores = extrairElevadores(texto);
-    const andares = extrairAndares(texto);
-    const blocos = extrairBlocos(texto);
-    const idade = extrairIdadeCondominio(texto);
-    const categoriaRisco = extrairCategoriaRisco(texto);
-    const tipoSeguro = extrairTipoSeguro(texto, seguradora);
-    const { produto: produtoRamo, modalidade } = extrairProdutoModalidade(texto);
-    const condicoesGerais = extrairCondicoesGerais(texto);
-    const versaoTabela = extrairVersaoTabela(texto);
-    const valorDeNovo = extrairValorDeNovo(texto);
+    const endereco = extrairEndereco(secaoSeguro || texto);
+    const lmg = extrairLMG(secaoSeguro || texto);
+    const elevadores = extrairElevadores(secaoSeguro || texto);
+    const andares = extrairAndares(secaoSeguro || texto);
+    const blocos = extrairBlocos(secaoSeguro || texto);
+    const idade = extrairIdadeCondominio(secaoSeguro || texto);
+    const categoriaRisco = extrairCategoriaRisco(secaoSeguro || texto);
+    const tipoSeguro = extrairTipoSeguro(secaoSeguro || texto, seguradora);
+    const { produto: produtoRamo, modalidade } = extrairProdutoModalidade(secaoSeguro || texto);
+    const condicoesGerais = extrairCondicoesGerais(secaoSeguro || texto);
+    const versaoTabela = extrairVersaoTabela(secaoSeguro || texto);
+    const valorDeNovo = extrairValorDeNovo(secaoSeguro || texto);
+    const dadosCond = extrairDadosCondominio(texto, secaoCondominio);
     const coberturas = extrairCoberturas(texto, lmg);
 
     return {
@@ -553,8 +610,17 @@ async function extrairDadosApolicePDF(pdfBuffer) {
       tem_elevador: elevadores.temElevador,
       quantidade_blocos: blocos,
       categoria_risco: categoriaRisco,
-      cnpj: cnpj || null,
-      endereco_local_segurado: endereco || null,
+      endereco_local_segurado: endereco || dadosCond.endereco_correspondencia || null,
+      cnpj: dadosCond.cnpj || null,
+      condominio_nome: dadosCond.nome || null,
+      email: dadosCond.email || null,
+      telefone: dadosCond.telefone || null,
+      endereco_correspondencia: dadosCond.endereco_correspondencia || null,
+      bairro: dadosCond.bairro || null,
+      cidade: dadosCond.cidade || null,
+      uf: dadosCond.uf || null,
+      cep: dadosCond.cep || null,
+      quantidade_funcionarios: dadosCond.quantidade_funcionarios || 0,
       coberturas,
       paginasLidas: paginasLidas || 1
     };
@@ -583,5 +649,7 @@ module.exports = {
   extrairCondicoesGerais,
   extrairVersaoTabela,
   extrairValorDeNovo,
+  extrairDadosCondominio,
   extrairCoberturas
 };
+

@@ -527,23 +527,29 @@ export default function SeguroFichaDrawer({
                       </thead>
                       <tbody>
                         {coberturasExibicao.map((cob, idx) => {
-                          const isTotal = cob.nome?.toLowerCase().includes('incêndio') || cob.nome?.toLowerCase().includes('basica') || cob.nome?.toLowerCase().includes('básica');
+                          const nomeCob = cob.nome_personalizado || cob.nome || cob.tipo || 'Cobertura';
+                          const isTotal = nomeCob.toLowerCase().includes('incêndio') || nomeCob.toLowerCase().includes('basica') || nomeCob.toLowerCase().includes('básica');
+                          const limiteVal = cob.valor_total_calculado ?? cob.valor_segurado ?? cob.limite_indenizacao ?? cob.limite;
+                          const precoVal = cob.preco_cobertura ?? cob.premio ?? cob.preco;
+                          const franqPct = cob.franquia_percentual != null ? cob.franquia_percentual : cob.franquia_pct;
+                          const franqRs = cob.franquia_reais != null ? cob.franquia_reais : cob.franquia_rs;
+
                           return (
                             <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)', background: idx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-surface-elevated)' }}>
                               <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                {cob.nome} {isTotal && <span style={{ color: 'var(--success)', fontSize: '11px', fontWeight: 700 }}> (Cobertura Básica)</span>}
+                                {nomeCob} {isTotal && <span style={{ color: 'var(--success)', fontSize: '11px', fontWeight: 700 }}> (Cobertura Básica)</span>}
                               </td>
                               <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: isTotal ? 'var(--success)' : 'var(--text-primary)' }}>
-                                {formatarMoeda(cob.limite_indenizacao || cob.limite)}
+                                {limiteVal != null ? formatarMoeda(limiteVal) : '—'}
                               </td>
                               <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                                {cob.premio ? formatarMoeda(cob.premio) : '-'}
+                                {precoVal != null ? formatarMoeda(precoVal) : '-'}
                               </td>
                               <td style={{ padding: '10px 8px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                {cob.franquia_percentual != null ? `${cob.franquia_percentual}%` : (cob.franquia_pct ? `${cob.franquia_pct}%` : '-')}
+                                {franqPct != null ? `${franqPct}%` : '-'}
                               </td>
                               <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)' }}>
-                                {cob.sem_franquia ? 'Sem Franquia' : (cob.franquia_reais ? formatarMoeda(cob.franquia_reais) : (cob.franquia_rs ? formatarMoeda(cob.franquia_rs) : 'Sem Franquia'))}
+                                {cob.sem_franquia ? 'Sem Franquia' : (franqRs != null ? formatarMoeda(franqRs) : 'Sem Franquia')}
                               </td>
                             </tr>
                           );
