@@ -142,6 +142,24 @@ export default function ExtintoresDrawer({
     }
   };
 
+  const handleRemoverArquivo = async () => {
+    if (!anexoPath) {
+      setAnexoPath(null);
+      setAnexoNome(null);
+      return;
+    }
+    if (!window.confirm('Deseja excluir este arquivo da pasta?')) return;
+    try {
+      const token = localStorage.getItem('cp_token');
+      await fetch(`/api/upload/arquivo?path=${encodeURIComponent(anexoPath)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (e) {}
+    setAnexoPath(null);
+    setAnexoNome(null);
+  };
+
   const handleSubmit = async () => {
     if (!condominioId) {
       setErro('Selecione um condomínio.');
@@ -354,8 +372,9 @@ export default function ExtintoresDrawer({
                     <button
                       type="button"
                       className="ext-btn-icon"
-                      onClick={() => { setAnexoPath(null); setAnexoNome(null); }}
+                      onClick={handleRemoverArquivo}
                       style={{ color: '#dc2626' }}
+                      title="Excluir arquivo da pasta"
                     >
                       Remover
                     </button>

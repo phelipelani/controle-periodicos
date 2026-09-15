@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const db = require('../db');
 
 const NUVEM_CONDOMINIOS_DIR =
   process.env.NUVEM_DIR ||
@@ -63,6 +64,52 @@ router.post('/dedetizacao/recibo', upload.single('documento'), (req, res) => {
     filename: req.file.filename
   });
 });
+
+// Deletar arquivo físico da pasta e limpar referências no sistema
+const removerArquivoFisico = (req, res) => {
+  const filePath = req.query.path || req.body?.path;
+  if (!filePath) {
+    return res.status(400).json({ erro: 'Caminho do arquivo não informado.' });
+  }
+
+  try {
+    const resolved = path.resolve(filePath);
+    let deletadoDoDisco = false;
+
+    // 1. Remover arquivo físico do disco/OneDrive se existir
+    if (fs.existsSync(resolved)) {
+      try {
+        fs.unlinkSync(resolved);
+        deletadoDoDisco = true;
+        console.log(`[Upload] Arquivo excluído com sucesso do disco: ${resolved}`);
+      } catch (err) {
+        console.error('[Upload] Falha ao deletar arquivo físico:', err);
+      }
+    }
+
+    // 2. Limpar referências no banco de dados SQLite
+    try {
+      db.prepare('UPDATE historico SET anexo = NULL WHERE anexo = ? OR anexo = ?').run(filePath, resolved);
+      db.prepare('UPDATE agendamentos SET anexo = NULL WHERE anexo = ? OR anexo = ?').run(filePath, resolved);
+      db.prepare('UPDATE reservatorios_detalhes SET anexo = NULL WHERE anexo = ? OR anexo = ?').run(filePath, resolved);
+      db.prepare('UPDATE extintores_detalhes SET anexo = NULL WHERE anexo = ? OR anexo = ?').run(filePath, resolved);
+    } catch (dbErr) {
+      console.error('[Upload] Erro ao limpar referências do arquivo no banco:', dbErr);
+    }
+
+    return res.json({
+      ok: true,
+      mensagem: deletadoDoDisco ? 'Arquivo excluído da pasta com sucesso!' : 'Arquivo desvinculado.',
+      deletadoDoDisco
+    });
+  } catch (err) {
+    console.error('[Upload] Erro ao processar exclusão de arquivo:', err);
+    return res.status(500).json({ erro: 'Erro ao excluir arquivo: ' + err.message });
+  }
+};
+
+router.delete('/arquivo', removerArquivoFisico);
+router.post('/remover', removerArquivoFisico);
 
 router.get('/preview', (req, res) => {
   const { path: filePath } = req.query;

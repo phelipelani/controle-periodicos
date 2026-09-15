@@ -104,6 +104,24 @@ export default function ReservatoriosDrawer({
     }
   };
 
+  const handleRemoverArquivo = async () => {
+    if (!anexoPath) {
+      setAnexoPath(null);
+      setAnexoNome(null);
+      return;
+    }
+    if (!window.confirm('Deseja excluir este arquivo da pasta?')) return;
+    try {
+      const token = localStorage.getItem('cp_token');
+      await fetch(`/api/upload/arquivo?path=${encodeURIComponent(anexoPath)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (e) {}
+    setAnexoPath(null);
+    setAnexoNome(null);
+  };
+
   const handleSubmit = async () => {
     if (!condominioId) {
       setErro('Selecione um condomínio.');
@@ -338,11 +356,8 @@ export default function ReservatoriosDrawer({
                   <button
                     type="button"
                     className="res-btn-icon"
-                    title="Remover arquivo"
-                    onClick={() => {
-                      setAnexoPath(null);
-                      setAnexoNome(null);
-                    }}
+                    title="Remover arquivo da pasta"
+                    onClick={handleRemoverArquivo}
                   >
                     &times;
                   </button>

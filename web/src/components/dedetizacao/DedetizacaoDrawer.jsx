@@ -60,6 +60,37 @@ const UploadDocumento = ({ onFileUploaded, initialPath, codigoCondominio, ano })
     }
   };
 
+  const handleRemoverArquivo = async () => {
+    if (!file || !file.path) {
+      setFile(null);
+      onFileUploaded(null);
+      return;
+    }
+
+    if (!window.confirm('Deseja realmente excluir este recibo? O arquivo será apagado permanentemente da pasta no OneDrive.')) {
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const token = localStorage.getItem('cp_token');
+      await fetch(`/api/upload/arquivo?path=${encodeURIComponent(file.path)}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      setFile(null);
+      onFileUploaded(null);
+    } catch (err) {
+      console.error('Erro ao deletar arquivo:', err);
+      setFile(null);
+      onFileUploaded(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const getPreviewUrl = () => {
     if (!file || !file.path) return '';
     return `/api/upload/preview?path=${encodeURIComponent(file.path)}`;
@@ -79,7 +110,7 @@ const UploadDocumento = ({ onFileUploaded, initialPath, codigoCondominio, ano })
           </div>
           <div style={{display:'flex', gap:'8px'}}>
             <button type="button" className="ded-btn-outline" style={{padding: '4px 10px', fontSize: '12px'}} onClick={() => setShowPreview(true)}>Visualizar</button>
-            <button type="button" className="ded-btn-icon" onClick={() => { setFile(null); onFileUploaded(null); }}>
+            <button type="button" className="ded-btn-icon" title="Excluir recibo da pasta" onClick={handleRemoverArquivo} disabled={uploading}>
                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>

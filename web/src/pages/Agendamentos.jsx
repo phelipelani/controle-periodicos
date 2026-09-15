@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import Modal from '../components/Modal';
 import { formatarData } from '../components/format';
-import { IcoDoc, IcoEye, IcoCheck, IcoAlertTriangle } from '../components/icons';
+import { IcoDoc, IcoEye, IcoCheck, IcoAlertTriangle, IcoTrash } from '../components/icons';
 
 const ROTULO_AG = { agendado: 'Agendado', realizado: 'Realizado', cancelado: 'Cancelado' };
 const CLASSE_AG = { agendado: 'a_vencer', realizado: 'em_dia', cancelado: 'sem_registro' };
@@ -115,6 +115,30 @@ export default function Agendamentos() {
     }
   }
 
+  async function excluirRecibo(reciboPath) {
+    if (!reciboPath) return;
+    if (!window.confirm('Deseja realmente excluir este recibo? O arquivo será apagado permanentemente da pasta no OneDrive.')) return;
+    try {
+      setErro('');
+      const token = localStorage.getItem('cp_token');
+      const res = await fetch(`/api/upload/arquivo?path=${encodeURIComponent(reciboPath)}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.erro || 'Falha ao excluir recibo');
+
+      setVisualizandoRecibo(null);
+      setSucesso('Recibo excluído da pasta com sucesso!');
+      setTimeout(() => setSucesso(''), 4000);
+      carregar();
+    } catch (e) {
+      setErro(e.message);
+    }
+  }
+
   const hoje = hojeISO();
   const deHoje = lista.filter((a) => a.status === 'agendado' && a.data_agendada === hoje);
   const vencidos = lista.filter((a) => a.status === 'agendado' && a.data_agendada < hoje);
@@ -216,15 +240,25 @@ export default function Agendamentos() {
                   <td>
                     {a.status === 'realizado' ? (
                       temRecibo ? (
-                        <button
-                          type="button"
-                          className="ded-nota ok"
-                          style={{ cursor: 'pointer', border: 'none', background: '#dcfce7', color: '#15803d', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                          onClick={() => setVisualizandoRecibo(a.recibo_anexo)}
-                          title="Clique para visualizar o recibo"
-                        >
-                          <IcoDoc width={14} height={14} /> Recibo Anexado
-                        </button>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <button
+                            type="button"
+                            className="ded-nota ok"
+                            style={{ cursor: 'pointer', border: 'none', background: '#dcfce7', color: '#15803d', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            onClick={() => setVisualizandoRecibo(a.recibo_anexo)}
+                            title="Clique para visualizar o recibo"
+                          >
+                            <IcoDoc width={14} height={14} /> Recibo Anexado
+                          </button>
+                          <button
+                            type="button"
+                            style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
+                            onClick={() => excluirRecibo(a.recibo_anexo)}
+                            title="Excluir recibo da pasta no OneDrive"
+                          >
+                            <IcoTrash width={13} height={13} />
+                          </button>
+                        </div>
                       ) : (
                         <button
                           type="button"
@@ -316,6 +350,16 @@ export default function Agendamentos() {
               Visualização do Recibo de Dedetização
             </h3>
             <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                style={{ background: '#dc2626', color: '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  excluirRecibo(visualizandoRecibo);
+                }}
+              >
+                <IcoTrash width={14} height={14} /> Excluir da Pasta
+              </button>
               <a 
                 href={`/api/upload/download?path=${encodeURIComponent(visualizandoRecibo)}`} 
                 className="btn-secundario"

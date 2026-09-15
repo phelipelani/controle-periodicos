@@ -334,6 +334,7 @@ export default function Dedetizacao() {
         <DedetizacaoModalVisualizar
           item={itemVisualizando}
           onFechar={() => setItemVisualizando(null)}
+          onReciboExcluido={carregarDados}
         />
       )}
     </div>

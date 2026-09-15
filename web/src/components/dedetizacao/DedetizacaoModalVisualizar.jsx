@@ -1,13 +1,41 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Modal from '../Modal';
-import { IcoDoc } from '../icons';
+import { IcoDoc, IcoTrash } from '../icons';
 
-export default function DedetizacaoModalVisualizar({ item, onFechar }) {
+export default function DedetizacaoModalVisualizar({ item, onFechar, onReciboExcluido }) {
+  const [excluindo, setExcluindo] = useState(false);
   if (!item) return null;
 
   const previewUrl = item.path
     ? `/api/upload/preview?path=${encodeURIComponent(item.path)}`
     : null;
+
+  const handleExcluirRecibo = async () => {
+    if (!item.path) return;
+    if (!window.confirm('Deseja realmente excluir este recibo? O arquivo será apagado permanentemente da pasta no OneDrive.')) {
+      return;
+    }
+
+    setExcluindo(true);
+    try {
+      const token = localStorage.getItem('cp_token');
+      const res = await fetch(`/api/upload/arquivo?path=${encodeURIComponent(item.path)}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.erro || 'Falha ao excluir recibo');
+
+      if (onReciboExcluido) onReciboExcluido();
+      onFechar();
+    } catch (err) {
+      alert('Erro ao excluir recibo: ' + err.message);
+    } finally {
+      setExcluindo(false);
+    }
+  };
 
   return (
     <Modal titulo={`Dedetização — ${item.codigo} - ${item.condominio}`} largura="680px" onFechar={onFechar}>
@@ -72,14 +100,25 @@ export default function DedetizacaoModalVisualizar({ item, onFechar }) {
             Nota Fiscal / Recibo
           </div>
           {previewUrl ? (
-            <a
-              href={previewUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#f8fafc', border: '1px solid #cbd5e1', padding: '12px 18px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#0f172a', textDecoration: 'none', transition: 'background 0.2s' }}
-            >
-              <IcoDoc /> Visualizar recibo / nota fiscal &rarr;
-            </a>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#f8fafc', border: '1px solid #cbd5e1', padding: '10px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, color: '#0f172a', textDecoration: 'none', transition: 'background 0.2s' }}
+              >
+                <IcoDoc /> Visualizar recibo / nota fiscal &rarr;
+              </a>
+              <button
+                type="button"
+                onClick={handleExcluirRecibo}
+                disabled={excluindo}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fee2e2', border: '1px solid #fecaca', color: '#dc2626', padding: '10px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: excluindo ? 'wait' : 'pointer' }}
+                title="Excluir o arquivo permanentemente da pasta do condomínio"
+              >
+                <IcoTrash /> {excluindo ? 'Excluindo...' : 'Excluir da pasta'}
+              </button>
+            </div>
           ) : (
             <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 16px', fontSize: '13px', color: '#b45309', display: 'flex', alignItems: 'center', gap: '8px' }}>
               ⚠️ Nenhum recibo anexado para este condomínio.
@@ -89,7 +128,7 @@ export default function DedetizacaoModalVisualizar({ item, onFechar }) {
       </div>
 
       <div className="modal-acoes" style={{ marginTop: '24px' }}>
-        <button type="button" className="secundario" onClick={onFechar}>
+        <button type="button" className="secundario" onClick={onFechar} disabled={excluindo}>
           Fechar
         </button>
       </div>
