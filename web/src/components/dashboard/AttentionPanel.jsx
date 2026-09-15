@@ -32,6 +32,59 @@ export default function AttentionPanel({ servicos = [], tiposServico = [] }) {
   const [mostrarTodos, setMostrarTodos] = useState(false);
   const [itemSelecionado, setItemSelecionado] = useState(null);
 
+  // Filtros individuais por cabeçalho da tabela
+  const [colFiltros, setColFiltros] = useState({
+    status: 'todos',
+    condominio: '',
+    servico: 'todos',
+    vencimento: 'todos',
+    situacao: 'todos'
+  });
+
+  // Ordenação por cabeçalho da tabela
+  const [ordenacao, setOrdenacao] = useState({
+    campo: 'vencimento',
+    direcao: 'asc'
+  });
+
+  const handleOrdenar = (campo) => {
+    setOrdenacao(prev => ({
+      campo,
+      direcao: prev.campo === campo && prev.direcao === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const temFiltroAtivo = useMemo(() => {
+    return (
+      colFiltros.status !== 'todos' ||
+      colFiltros.condominio.trim() !== '' ||
+      colFiltros.servico !== 'todos' ||
+      colFiltros.vencimento !== 'todos' ||
+      colFiltros.situacao !== 'todos'
+    );
+  }, [colFiltros]);
+
+  const limparTodosFiltros = () => {
+    setColFiltros({
+      status: 'todos',
+      condominio: '',
+      servico: 'todos',
+      vencimento: 'todos',
+      situacao: 'todos'
+    });
+  };
+
+  const renderSortIcon = (campo) => {
+    if (ordenacao.campo !== campo) {
+      return <span style={{ opacity: 0.35, fontSize: '10px', marginLeft: '3px' }}>⇅</span>;
+    }
+    return (
+      <span style={{ color: '#d4202a', fontSize: '10px', fontWeight: 800, marginLeft: '3px' }}>
+        {ordenacao.direcao === 'asc' ? '▲' : '▼'}
+      </span>
+    );
+  };
+
   // Lista base de pendências (vencidos e a vencer)
   const pendenciasBase = useMemo(() => {
     return servicos.filter(s => s.statusCalc === 'vencido' || s.statusCalc === 'a_vencer');
@@ -47,10 +100,12 @@ export default function AttentionPanel({ servicos = [], tiposServico = [] }) {
     return counts;
   }, [pendenciasBase]);
 
-  // Aplicação dos filtros internos
+  // Aplicação dos filtros internos e de cabeçalho
   const pendenciasFiltradas = useMemo(() => {
     let list = pendenciasBase.filter(s => {
       const chave = s.servicoChave || s.servicoId;
+      
+      // Filtros rápidos superiores
       if (filtroServico !== 'todos' && chave !== filtroServico) return false;
       if (filtroStatus !== 'todos' && s.statusCalc !== filtroStatus) return false;
       if (busca.trim()) {
@@ -62,22 +117,78 @@ export default function AttentionPanel({ servicos = [], tiposServico = [] }) {
           return false;
         }
       }
+
+      // Filtro de cabeçalho: Status
+      if (colFiltros.status !== 'todos' && s.statusCalc !== colFiltros.status) {
+        return false;
+      }
+
+      // Filtro de cabeçalho: Condomínio
+      if (colFiltros.condominio.trim()) {
+        const termo = colFiltros.condominio.toLowerCase();
+        const nome = (s.condominioNome || '').toLowerCase();
+        const cod = (s.codigoCondominio || '').toLowerCase();
+        if (!nome.includes(termo) && !cod.includes(termo)) {
+          return false;
+        }
+      }
+
+      // Filtro de cabeçalho: Serviço
+      if (colFiltros.servico !== 'todos' && chave !== colFiltros.servico && s.servicoNome !== colFiltros.servico) {
+        return false;
+      }
+
+      // Filtro de cabeçalho: Vencimento
+      if (colFiltros.vencimento !== 'todos') {
+        const dias = s.diasRestantes != null ? s.diasRestantes : (s.statusCalc === 'vencido' ? -1 : 999);
+        if (colFiltros.vencimento === 'vencido' && s.statusCalc !== 'vencido') return false;
+        if (colFiltros.vencimento === '7dias' && (s.statusCalc === 'vencido' || dias > 7)) return false;
+        if (colFiltros.vencimento === '15dias' && (s.statusCalc === 'vencido' || dias > 15)) return false;
+        if (colFiltros.vencimento === '30dias' && (s.statusCalc === 'vencido' || dias > 30)) return false;
+        if (colFiltros.vencimento === '60dias' && (s.statusCalc === 'vencido' || dias > 60)) return false;
+      }
+
+      // Filtro de cabeçalho: Situação
+      if (colFiltros.situacao !== 'todos' && s.statusCalc !== colFiltros.situacao) {
+        return false;
+      }
+
       return true;
     });
 
-    // Ordenação:
-    // 1. Vencidos primeiro (mais dias vencidos no topo)
-    // 2. A vencer depois (menos dias restantes no topo)
+    // Ordenação dinâmica pelos cabeçalhos
     list.sort((a, b) => {
-      if (a.statusCalc === 'vencido' && b.statusCalc !== 'vencido') return -1;
-      if (a.statusCalc !== 'vencido' && b.statusCalc === 'vencido') return 1;
-      const dataA = a.dataValidade || '9999-12-31';
-      const dataB = b.dataValidade || '9999-12-31';
-      return dataA.localeCompare(dataB);
+      let valA, valB;
+      switch (ordenacao.campo) {
+        case 'status':
+          valA = a.statusCalc === 'vencido' ? 0 : 1;
+          valB = b.statusCalc === 'vencido' ? 0 : 1;
+          break;
+        case 'condominio':
+          valA = (a.condominioNome || '').toLowerCase();
+          valB = (b.condominioNome || '').toLowerCase();
+          return ordenacao.direcao === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        case 'servico':
+          valA = (a.servicoNome || '').toLowerCase();
+          valB = (b.servicoNome || '').toLowerCase();
+          return ordenacao.direcao === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        case 'situacao':
+          valA = a.diasRestantes != null ? a.diasRestantes : 0;
+          valB = b.diasRestantes != null ? b.diasRestantes : 0;
+          break;
+        case 'vencimento':
+        default:
+          valA = a.dataValidade || '9999-12-31';
+          valB = b.dataValidade || '9999-12-31';
+          return ordenacao.direcao === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      }
+      if (valA < valB) return ordenacao.direcao === 'asc' ? -1 : 1;
+      if (valA > valB) return ordenacao.direcao === 'asc' ? 1 : -1;
+      return 0;
     });
 
     return list;
-  }, [pendenciasBase, filtroServico, filtroStatus, busca]);
+  }, [pendenciasBase, filtroServico, filtroStatus, busca, colFiltros, ordenacao]);
 
   const itensExibidos = mostrarTodos ? pendenciasFiltradas : pendenciasFiltradas.slice(0, 10);
 
@@ -217,17 +328,165 @@ export default function AttentionPanel({ servicos = [], tiposServico = [] }) {
         </div>
       </div>
 
-      {/* Tabela de Itens */}
+      {/* Tabela de Itens com Filtros nos Cabeçalhos */}
       <div className="dash-table-wrap">
         <table className="dash-table">
           <thead>
+            {/* Linha 1: Título das Colunas + Ordenação */}
             <tr>
-              <th style={{ width: '8%', textAlign: 'center' }}>Status</th>
-              <th style={{ width: '36%' }}>Condomínio</th>
-              <th style={{ width: '18%' }}>Serviço</th>
-              <th style={{ width: '16%' }}>Vencimento</th>
-              <th style={{ width: '14%' }}>Situação</th>
-              <th style={{ width: '8%', textAlign: 'center' }}>Ação</th>
+              <th style={{ width: '9%', textAlign: 'center' }}>
+                <button
+                  type="button"
+                  className="dash-th-sort"
+                  onClick={() => handleOrdenar('status')}
+                  title="Ordenar por Status"
+                >
+                  STATUS {renderSortIcon('status')}
+                </button>
+              </th>
+              <th style={{ width: '33%' }}>
+                <button
+                  type="button"
+                  className="dash-th-sort"
+                  onClick={() => handleOrdenar('condominio')}
+                  title="Ordenar por Condomínio"
+                >
+                  CONDOMÍNIO {renderSortIcon('condominio')}
+                </button>
+              </th>
+              <th style={{ width: '18%' }}>
+                <button
+                  type="button"
+                  className="dash-th-sort"
+                  onClick={() => handleOrdenar('servico')}
+                  title="Ordenar por Serviço"
+                >
+                  SERVIÇO {renderSortIcon('servico')}
+                </button>
+              </th>
+              <th style={{ width: '16%' }}>
+                <button
+                  type="button"
+                  className="dash-th-sort"
+                  onClick={() => handleOrdenar('vencimento')}
+                  title="Ordenar por Vencimento"
+                >
+                  VENCIMENTO {renderSortIcon('vencimento')}
+                </button>
+              </th>
+              <th style={{ width: '15%' }}>
+                <button
+                  type="button"
+                  className="dash-th-sort"
+                  onClick={() => handleOrdenar('situacao')}
+                  title="Ordenar por Situação"
+                >
+                  SITUAÇÃO {renderSortIcon('situacao')}
+                </button>
+              </th>
+              <th style={{ width: '9%', textAlign: 'center' }}>
+                <span className="dash-th-sort" style={{ cursor: 'default' }}>
+                  AÇÃO
+                </span>
+              </th>
+            </tr>
+
+            {/* Linha 2: Filtros de cada Cabeçalho */}
+            <tr className="dash-th-filter-row">
+              <th style={{ textAlign: 'center' }}>
+                <select
+                  className="dash-col-filter-select"
+                  value={colFiltros.status}
+                  onChange={(e) => setColFiltros(prev => ({ ...prev, status: e.target.value }))}
+                  title="Filtrar por Status"
+                >
+                  <option value="todos">Todos</option>
+                  <option value="vencido">🔴 Vencido</option>
+                  <option value="a_vencer">🟡 A vencer</option>
+                </select>
+              </th>
+
+              <th>
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <input
+                    type="text"
+                    className="dash-col-filter-input"
+                    placeholder="Filtrar condomínio..."
+                    value={colFiltros.condominio}
+                    onChange={(e) => setColFiltros(prev => ({ ...prev, condominio: e.target.value }))}
+                  />
+                  {colFiltros.condominio && (
+                    <button
+                      type="button"
+                      className="dash-col-filter-clear-btn"
+                      onClick={() => setColFiltros(prev => ({ ...prev, condominio: '' }))}
+                      title="Limpar filtro de condomínio"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </th>
+
+              <th>
+                <select
+                  className="dash-col-filter-select"
+                  value={colFiltros.servico}
+                  onChange={(e) => setColFiltros(prev => ({ ...prev, servico: e.target.value }))}
+                  title="Filtrar por Tipo de Serviço"
+                >
+                  <option value="todos">Todos os serviços</option>
+                  {abasServico.map(ts => (
+                    <option key={ts.chave} value={ts.chave}>
+                      {ts.nome}
+                    </option>
+                  ))}
+                </select>
+              </th>
+
+              <th>
+                <select
+                  className="dash-col-filter-select"
+                  value={colFiltros.vencimento}
+                  onChange={(e) => setColFiltros(prev => ({ ...prev, vencimento: e.target.value }))}
+                  title="Filtrar por Prazo de Vencimento"
+                >
+                  <option value="todos">Todas as datas</option>
+                  <option value="vencido">Já vencidos</option>
+                  <option value="7dias">Próximos 7 dias</option>
+                  <option value="15dias">Próximos 15 dias</option>
+                  <option value="30dias">Próximos 30 dias</option>
+                  <option value="60dias">Próximos 60 dias</option>
+                </select>
+              </th>
+
+              <th>
+                <select
+                  className="dash-col-filter-select"
+                  value={colFiltros.situacao}
+                  onChange={(e) => setColFiltros(prev => ({ ...prev, situacao: e.target.value }))}
+                  title="Filtrar por Situação"
+                >
+                  <option value="todos">Todas</option>
+                  <option value="vencido">Vencido</option>
+                  <option value="a_vencer">A vencer</option>
+                </select>
+              </th>
+
+              <th style={{ textAlign: 'center' }}>
+                {temFiltroAtivo ? (
+                  <button
+                    type="button"
+                    className="dash-col-clear-all-btn"
+                    onClick={limparTodosFiltros}
+                    title="Limpar filtros dos cabeçalhos"
+                  >
+                    ✕ Limpar
+                  </button>
+                ) : (
+                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>—</span>
+                )}
+              </th>
             </tr>
           </thead>
           <tbody>
