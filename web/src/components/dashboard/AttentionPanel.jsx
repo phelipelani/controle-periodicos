@@ -105,7 +105,7 @@ export default function AttentionPanel({ servicos = [], tiposServico = [] }) {
     navigate(`/condominios/${condominioId}`);
   };
 
-  // Lista dinâmica de abas de serviços disponíveis
+  // Lista de abas de serviços disponíveis (sempre exibe todos os serviços do sistema)
   const abasServico = useMemo(() => {
     const defaultServicos = [
       { chave: 'dedetizacao', nome: 'Dedetização' },
@@ -116,9 +116,8 @@ export default function AttentionPanel({ servicos = [], tiposServico = [] }) {
       { chave: 'spda', nome: 'SPDA' }
     ];
 
-    const servicosPresentes = tiposServico.length > 0 ? tiposServico : defaultServicos;
-    return servicosPresentes.filter(ts => (contadoresServico[ts.chave] || 0) > 0 || filtroServico === ts.chave);
-  }, [tiposServico, contadoresServico, filtroServico]);
+    return tiposServico.length > 0 ? tiposServico : defaultServicos;
+  }, [tiposServico]);
 
   return (
     <div className="dash-card">
@@ -162,7 +161,7 @@ export default function AttentionPanel({ servicos = [], tiposServico = [] }) {
         </div>
       </div>
 
-      {/* Barra de Filtros por Serviço (Chips) */}
+      {/* Barra de Filtros por Serviço (Chips) - Mostra todos os serviços */}
       <div className="dash-attention-chips">
         <button
           type="button"
@@ -329,11 +328,11 @@ export default function AttentionPanel({ servicos = [], tiposServico = [] }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px 0' }}>
             {/* Bloco Condomínio */}
             <div className="dash-modal-box">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>
+              <div className="dash-modal-label">
                 <IcoCondominio width={15} height={15} /> Condomínio
               </div>
-              <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
-                {itemSelecionado.codigoCondominio && <span style={{ color: '#d4202a', marginRight: '6px' }}>#{itemSelecionado.codigoCondominio}</span>}
+              <div className="dash-modal-title">
+                {itemSelecionado.codigoCondominio && <span className="dash-modal-code">#{itemSelecionado.codigoCondominio}</span>}
                 {itemSelecionado.condominioNome}
               </div>
             </div>
@@ -341,22 +340,22 @@ export default function AttentionPanel({ servicos = [], tiposServico = [] }) {
             {/* Bloco Serviço e Status */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="dash-modal-box">
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Serviço</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px', fontWeight: 700, marginTop: '4px', color: '#0f172a' }}>
+                <div className="dash-modal-label">Serviço</div>
+                <div className="dash-modal-val" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {getServicoIcon(itemSelecionado.servicoChave || itemSelecionado.servicoId)}
                   {itemSelecionado.servicoNome}
                 </div>
               </div>
 
               <div className="dash-modal-box">
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Situação</div>
+                <div className="dash-modal-label">Situação</div>
                 <div style={{ marginTop: '4px' }}>
                   {itemSelecionado.statusCalc === 'vencido' ? (
                     <span className="dash-badge vencido" style={{ fontSize: '12px', padding: '4px 10px' }}>
                       {renderDias(itemSelecionado)}
                     </span>
                   ) : (
-                    <span className="dash-badge avencer" style={{ fontSize: '12px', padding: '4px 10px', background: '#fef3c7', color: '#b45309' }}>
+                    <span className="dash-badge avencer" style={{ fontSize: '12px', padding: '4px 10px' }}>
                       {renderDias(itemSelecionado)}
                     </span>
                   )}
@@ -367,15 +366,15 @@ export default function AttentionPanel({ servicos = [], tiposServico = [] }) {
             {/* Bloco Vencimento e Empresa */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="dash-modal-box">
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Data de Vencimento</div>
-                <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '4px', color: '#0f172a' }}>
+                <div className="dash-modal-label">Data de Vencimento</div>
+                <div className="dash-modal-val">
                   {formatarData(itemSelecionado.dataValidade)}
                 </div>
               </div>
 
               <div className="dash-modal-box">
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Última Realização</div>
-                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '4px', color: '#0f172a' }}>
+                <div className="dash-modal-label">Última Realização</div>
+                <div className="dash-modal-val">
                   {itemSelecionado.ultimaRealizacao ? formatarData(itemSelecionado.ultimaRealizacao) : 'Não registrada'}
                 </div>
               </div>
@@ -383,8 +382,8 @@ export default function AttentionPanel({ servicos = [], tiposServico = [] }) {
 
             {itemSelecionado.empresa && itemSelecionado.empresa !== '-' && (
               <div className="dash-modal-box">
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Empresa Responsável</div>
-                <div style={{ fontSize: '14px', fontWeight: 600, marginTop: '4px', color: '#0f172a' }}>
+                <div className="dash-modal-label">Empresa Responsável</div>
+                <div className="dash-modal-val">
                   {itemSelecionado.empresa}
                 </div>
               </div>
@@ -402,7 +401,7 @@ export default function AttentionPanel({ servicos = [], tiposServico = [] }) {
               <button
                 type="button"
                 className="btn-primario"
-                style={{ background: '#d4202a', color: '#fff', border: 'none' }}
+                style={{ background: '#d4202a', color: '#ffffff', border: 'none' }}
                 onClick={() => navegarParaServico(itemSelecionado.servicoChave || itemSelecionado.servicoId)}
               >
                 Abrir Módulo de {itemSelecionado.servicoNome} →

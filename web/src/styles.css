@@ -1205,6 +1205,27 @@ body.dark-theme {
   border-color: #1e293b !important;
   color: #f8fafc !important;
 }
+[data-theme="dark"] .dash-modal-label {
+  color: #94a3b8 !important;
+}
+[data-theme="dark"] .dash-modal-title {
+  color: #ffffff !important;
+}
+[data-theme="dark"] .dash-modal-code {
+  color: #f87171 !important;
+}
+[data-theme="dark"] .dash-modal-val {
+  color: #f8fafc !important;
+}
+[data-theme="dark"] .modal h2 {
+  color: #ffffff !important;
+}
+[data-theme="dark"] .card.modal,
+[data-theme="dark"] .modal {
+  background: #0f172a !important;
+  border-color: #1e293b !important;
+  color: #f8fafc !important;
+}
 [data-theme="dark"] .dash-attention-footer {
   border-top-color: #1e293b !important;
 }
