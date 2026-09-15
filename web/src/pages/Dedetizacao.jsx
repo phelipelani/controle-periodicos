@@ -293,7 +293,10 @@ export default function Dedetizacao() {
   return (
     <div className="ded-layout">
       <div className={`ded-content ${drawerOpen ? 'drawer-open' : ''}`}>
-        <DedetizacaoHeader onNovoAgendamento={handleNovoAgendamento} />
+        <DedetizacaoHeader 
+          onNovoAgendamento={handleNovoAgendamento} 
+          onVerAgendamentos={() => navigate('/agendamentos')} 
+        />
         
         {erro ? (
           <div style={{ color: 'red', margin: '20px' }}>Erro: {erro}</div>

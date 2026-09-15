@@ -2,7 +2,7 @@ import React from 'react';
 import { IcoCondominio, IcoCheck, IcoRelogio, IcoCalendario, IcoDoc, IcoSino } from '../icons';
 import AnimatedNumber from '../AnimatedNumber';
 
-export const DedetizacaoHeader = ({ onNovoAgendamento }) => (
+export const DedetizacaoHeader = ({ onNovoAgendamento, onVerAgendamentos }) => (
   <div className="ded-header">
     <div className="ded-title">
       <div className="ded-title-icon"><IcoCondominio /></div>
@@ -11,9 +11,19 @@ export const DedetizacaoHeader = ({ onNovoAgendamento }) => (
         <p>Controle das execuções de dedetização dos condomínios.</p>
       </div>
     </div>
-    <button className="ded-btn-primary" onClick={onNovoAgendamento}>
-      + Novo agendamento
-    </button>
+    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+      <button 
+        type="button"
+        className="ded-btn-outline" 
+        onClick={onVerAgendamentos}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+      >
+        <IcoCalendario width={16} height={16} /> Ver Agendamentos
+      </button>
+      <button className="ded-btn-primary" onClick={onNovoAgendamento}>
+        + Novo agendamento
+      </button>
+    </div>
   </div>
 );
 

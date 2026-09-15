@@ -275,7 +275,8 @@ router.put('/:id/servicos/:servicoId', (req, res) => {
   } catch (e) {
     return res.status(400).json({ erro: e.message });
   }
-  res.json({ ...condominio, servicos: servicosDoCondominio(condominioId) });
+  const cond = db.prepare('SELECT * FROM condominios WHERE id = ?').get(condominioId);
+  res.json({ ...cond, servicos: servicosDoCondominio(condominioId) });
 });
 
 // Rota específica para upload/anexo de recibo por empresa ou gerente
