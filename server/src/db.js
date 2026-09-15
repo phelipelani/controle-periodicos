@@ -245,7 +245,8 @@ function migrate() {
     'ALTER TABLE seguro_coberturas ADD COLUMN preco_cobertura REAL',
     'ALTER TABLE seguro_coberturas ADD COLUMN franquia_percentual REAL',
     'ALTER TABLE seguro_coberturas ADD COLUMN franquia_reais REAL',
-    'ALTER TABLE seguro_coberturas ADD COLUMN sem_franquia INTEGER DEFAULT 0'
+    'ALTER TABLE seguro_coberturas ADD COLUMN sem_franquia INTEGER DEFAULT 0',
+    'ALTER TABLE agendamentos ADD COLUMN anexo TEXT'
   ];
   for (const sql of colunasCoberturas) {
     try {

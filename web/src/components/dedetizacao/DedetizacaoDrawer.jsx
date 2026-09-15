@@ -3,7 +3,7 @@ import { IcoDoc, IcoCalendario, IcoCheck, IcoTrash } from '../icons';
 import { api } from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 
-const UploadDocumento = ({ onFileUploaded, initialPath }) => {
+const UploadDocumento = ({ onFileUploaded, initialPath, codigoCondominio, ano }) => {
   const [file, setFile] = useState(initialPath ? { name: initialPath.split(/[\\/]/).pop(), path: initialPath } : null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
@@ -26,6 +26,8 @@ const UploadDocumento = ({ onFileUploaded, initialPath }) => {
     
     const formData = new FormData();
     formData.append('documento', selectedFile);
+    if (codigoCondominio) formData.append('codigo_condominio', codigoCondominio);
+    if (ano) formData.append('ano', ano);
 
     try {
       const token = localStorage.getItem('cp_token');
@@ -505,7 +507,12 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
                   <div style={{fontSize:'11px', color:'#64748b'}}>Informe as unidades atendidas e notas sobre a execução do serviço.</div>
                 </div>
 
-                <UploadDocumento onFileUploaded={setAnexoPath} initialPath={anexoPath} />
+                <UploadDocumento 
+                  onFileUploaded={setAnexoPath} 
+                  initialPath={anexoPath} 
+                  codigoCondominio={rowData?.codigo || rowData?.id}
+                  ano={(dataExecucao || '').split('-')[0] || new Date().getFullYear()}
+                />
               </div>
             )}
           </>

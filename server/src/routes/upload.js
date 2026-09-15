@@ -4,35 +4,49 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const getUploadDir = () => {
-  const year = new Date().getFullYear();
-  // Z:\DEDETIZAÇÃO\DDT 2026\recibos
-  const uploadDir = path.join('Z:', 'DEDETIZAÇÃO', `DDT ${year}`, 'recibos');
-  
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+const NUVEM_CONDOMINIOS_DIR =
+  process.env.NUVEM_DIR ||
+  'C:\\Users\\lesco\\OneDrive - IMCosta Administradora\\Arquivos de Leandro Costa - IMCosta - IMCosta Files\\CONDOMÍNIOS';
+
+const getUploadDirDedetizacao = (ano, codigoCondominio) => {
+  let baseDir = '';
+  if (fs.existsSync(NUVEM_CONDOMINIOS_DIR)) {
+    baseDir = path.join(NUVEM_CONDOMINIOS_DIR, 'DEDETIZAÇÃO');
+  } else {
+    const dataDir = process.env.DB_DIR || path.join(__dirname, '../../data');
+    baseDir = path.join(dataDir, 'adm', 'dedetizacao');
   }
-  return uploadDir;
+
+  const codFormatado = codigoCondominio ? String(codigoCondominio).padStart(3, '0') : 'geral';
+  const anoFinal = String(ano || new Date().getFullYear());
+  const dir = path.join(baseDir, anoFinal, codFormatado);
+  
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return dir;
 };
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     try {
-      const dir = getUploadDir();
+      const ano = req.body.ano || new Date().getFullYear();
+      const codigoCondominio = req.body.codigo_condominio || req.body.condominio_id || req.query.codigo || req.query.condominio_id || '000';
+      const dir = getUploadDirDedetizacao(ano, codigoCondominio);
       cb(null, dir);
     } catch (err) {
       cb(err, null);
     }
   },
   filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ano = req.body.ano || new Date().getFullYear();
+    const uniqueSuffix = Date.now().toString().slice(-6);
     const ext = path.extname(file.originalname);
-    const name = path.basename(file.originalname, ext);
-    cb(null, name + '-' + uniqueSuffix + ext);
+    cb(null, `recibo_dedetizacao_${ano}_${uniqueSuffix}${ext}`);
   }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage, limits: { fileSize: 30 * 1024 * 1024 } });
 
 router.post('/dedetizacao/recibo', upload.single('documento'), (req, res) => {
   if (!req.file) {
@@ -40,7 +54,7 @@ router.post('/dedetizacao/recibo', upload.single('documento'), (req, res) => {
   }
   
   res.json({
-    mensagem: 'Arquivo salvo com sucesso!',
+    mensagem: 'Recibo salvo com sucesso no OneDrive!',
     caminho: req.file.path,
     filename: req.file.filename
   });
