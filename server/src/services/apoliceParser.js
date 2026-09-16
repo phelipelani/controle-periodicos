@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { spawn } = require('child_process');
 const pdfParse = require('pdf-parse');
 const Tesseract = require('tesseract.js');
@@ -9,7 +10,7 @@ const Tesseract = require('tesseract.js');
  */
 async function renderPdfPagesToPng(pdfBuffer, maxPages = 3) {
   return new Promise((resolve, reject) => {
-    const tempDir = path.join(__dirname, '../../data');
+    const tempDir = path.join(os.tmpdir(), 'cp_seguros_ocr');
     if (!fs.existsSync(tempDir)) {
       try { fs.mkdirSync(tempDir, { recursive: true }); } catch (e) {}
     }
@@ -80,9 +81,21 @@ except Exception as e:
  * Realiza OCR nas páginas renderizadas
  */
 async function extrairTextoViaOcr(pngBuffers) {
+  const trainedDataDir = path.join(os.tmpdir(), 'tessdata');
+  if (!fs.existsSync(trainedDataDir)) {
+    try { fs.mkdirSync(trainedDataDir, { recursive: true }); } catch (e) {}
+  }
+  const localTrainedData = path.join(__dirname, '../../por.traineddata');
+  const targetTrainedData = path.join(trainedDataDir, 'por.traineddata');
+  if (fs.existsSync(localTrainedData) && !fs.existsSync(targetTrainedData)) {
+    try { fs.copyFileSync(localTrainedData, targetTrainedData); } catch (e) {}
+  }
+
   let textoCompleto = '';
   for (let i = 0; i < pngBuffers.length; i++) {
     const res = await Tesseract.recognize(pngBuffers[i], 'por', {
+      langPath: trainedDataDir,
+      cachePath: trainedDataDir,
       logger: () => {}
     });
     textoCompleto += `\n=== PÁGINA ${i + 1} ===\n` + (res.data.text || '');

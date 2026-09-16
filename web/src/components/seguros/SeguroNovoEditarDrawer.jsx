@@ -338,7 +338,14 @@ export default function SeguroNovoEditarDrawer({
         body: formData
       });
 
-      const data = await res.json();
+      const resText = await res.text();
+      let data = {};
+      try {
+        data = JSON.parse(resText);
+      } catch (jsonErr) {
+        throw new Error(resText || `Erro no servidor (${res.status}): Não foi possível processar a apólice.`);
+      }
+
       if (!res.ok || data.erro) {
         throw new Error(data.erro || 'Falha ao extrair dados do PDF.');
       }
