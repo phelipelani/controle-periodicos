@@ -1,4 +1,94 @@
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
 const pdfParse = require('pdf-parse');
+const Tesseract = require('tesseract.js');
+
+/**
+ * Renderiza páginas do PDF em buffers de imagem PNG usando Python / PyMuPDF
+ */
+async function renderPdfPagesToPng(pdfBuffer, maxPages = 3) {
+  return new Promise((resolve, reject) => {
+    const tempDir = path.join(__dirname, '../../data');
+    if (!fs.existsSync(tempDir)) {
+      try { fs.mkdirSync(tempDir, { recursive: true }); } catch (e) {}
+    }
+    const tempPdfPath = path.join(tempDir, `temp_ocr_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`);
+    fs.writeFileSync(tempPdfPath, pdfBuffer);
+
+    const pyScript = `
+import sys, os, fitz, json
+
+pdf_path = sys.argv[1]
+max_pages = int(sys.argv[2]) if len(sys.argv) > 2 else 3
+
+try:
+    doc = fitz.open(pdf_path)
+    output_files = []
+    
+    for i in range(min(max_pages, len(doc))):
+        page = doc[i]
+        pix = page.get_pixmap(dpi=200)
+        out_path = f"{pdf_path}_p{i+1}.png"
+        pix.save(out_path)
+        output_files.append(out_path)
+    
+    print(json.dumps({"success": True, "files": output_files, "total_pages": len(doc)}))
+except Exception as e:
+    print(json.dumps({"success": False, "error": str(e)}))
+`;
+
+    const proc = spawn('python', ['-c', pyScript, tempPdfPath, String(maxPages)]);
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (d) => { stdout += d.toString(); });
+    proc.stderr.on('data', (d) => { stderr += d.toString(); });
+
+    proc.on('close', (code) => {
+      try {
+        if (fs.existsSync(tempPdfPath)) fs.unlinkSync(tempPdfPath);
+      } catch (e) {}
+
+      if (code !== 0 || !stdout.trim()) {
+        return reject(new Error(`Erro ao renderizar PDF via PyMuPDF: ${stderr || 'Processo falhou'}`));
+      }
+
+      try {
+        const result = JSON.parse(stdout.trim());
+        if (!result.success) {
+          return reject(new Error(result.error || 'Falha na renderização de páginas.'));
+        }
+
+        const pngBuffers = [];
+        for (const file of result.files) {
+          if (fs.existsSync(file)) {
+            pngBuffers.push(fs.readFileSync(file));
+            try { fs.unlinkSync(file); } catch (e) {}
+          }
+        }
+
+        resolve({ buffers: pngBuffers, totalPages: result.total_pages });
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+}
+
+/**
+ * Realiza OCR nas páginas renderizadas
+ */
+async function extrairTextoViaOcr(pngBuffers) {
+  let textoCompleto = '';
+  for (let i = 0; i < pngBuffers.length; i++) {
+    const res = await Tesseract.recognize(pngBuffers[i], 'por', {
+      logger: () => {}
+    });
+    textoCompleto += `\n=== PÁGINA ${i + 1} ===\n` + (res.data.text || '');
+  }
+  return textoCompleto;
+}
 
 /**
  * Normaliza textos para busca
@@ -408,8 +498,12 @@ function extrairDadosCondominio(texto, secaoCondominio = '') {
   if (matchCnpj) cnpj = matchCnpj[1].trim();
 
   let email = '';
-  const matchEmail = alvo.match(/E-mail:\s*([^\s\n\r]+@[^\s\n\r]+)/i);
-  if (matchEmail) email = matchEmail[1].trim();
+  const matchEmail = alvo.match(/E-mail:\s*([^\s\n\r]+)/i);
+  if (matchEmail) {
+    email = matchEmail[1].trim()
+      .replace(/[&Q]+(?=[a-zA-Z0-9-]+\.[a-zA-Z]{2,})/g, '@')
+      .replace(/^:+/, '');
+  }
 
   let tel = '';
   const matchTel = alvo.match(/Tel:\s*([\d\s()-]+)/i);
@@ -453,66 +547,177 @@ function extrairDadosCondominio(texto, secaoCondominio = '') {
   };
 }
 
+const COBERTURAS_CATALOGO = [
+  { chave: 'basica_simples', nome: 'Básica Simples (Incêndio)', regex: /B[aá]sica\s*Simples|Inc[eê]ndio\s*,\s*Queda/i },
+  { chave: 'danos_eletricos', nome: 'Danos Elétricos', regex: /Danos\s*El[eé]tricos/i },
+  { chave: 'desmoronamento', nome: 'Desmoronamento', regex: /Desmoronamento/i },
+  { chave: 'impacto_veiculos', nome: 'Impacto de Veículos', regex: /Impacto\s*de\s*Ve[ií]culos/i },
+  { chave: 'incendio_bens', nome: 'Incêndio de Bens de Condôminos', regex: /Inc[eê]ndio\s*(?:de)?\s*Bens/i },
+  { chave: 'quebra_vidros', nome: 'Quebra de Vidros/Anúncios Luminosos', regex: /Quebra\s*de\s*Vidros/i },
+  { chave: 'rc_portoes', nome: 'RC Portões Automáticos', regex: /RC\s*Port[õo]es|Port[õo]es\s*Autom[aá]ticos/i },
+  { chave: 'rc_danos_morais', nome: 'RC Danos Morais', regex: /RC\s*Danos\s*Morais/i },
+  { chave: 'rc_guarda_veiculos', nome: 'RC Guarda Veículos - Compreensiva', regex: /Guarda\s*Ve[ií]culos/i },
+  { chave: 'rc_empregador', nome: 'RC Empregador', regex: /RC\s*Empregador/i },
+  { chave: 'rc_condominio', nome: 'RC Condomínio', regex: /RC\s*Condom[ií]nio/i },
+  { chave: 'rc_sindico', nome: 'RC Síndico', regex: /RC\s*S[ií]ndico/i },
+  { chave: 'roubo_bens', nome: 'Roubo de Bens de Condôminos', regex: /Roubo\s*(?:de)?\s*Bens/i },
+  { chave: 'ruptura_tanques', nome: 'Ruptura de Tanques e Tubulações', regex: /Ruptura\s*de\s*Tanques/i },
+  { chave: 'vendaval', nome: 'Vendaval / Ciclone / Tornado / Granizo', regex: /Vendaval/i },
+  { chave: 'vg_funcionarios', nome: 'VG Funcionários Morte, IPA e IPDF', regex: /VG\s*Funcion[aá]rios|Vida\s*em\s*Grupo/i },
+  { chave: 'assistencia_24h', nome: 'Assistência 24h', regex: /Assist[eê]ncia\s*24h/i }
+];
+
 /**
  * Extrai tabela completa de coberturas contratadas
  */
 function extrairCoberturas(texto, lmgPadrao) {
   const coberturas = [];
   const lines = texto.split('\n');
-  let inCoberturas = false;
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('COBERTURAS')) {
-      inCoberturas = true;
-      continue;
-    }
-    if (inCoberturas && (trimmed.startsWith('INFORMAÇÕES DE PAGAMENTO') || trimmed.startsWith('Prêmio Líquido') || trimmed.startsWith('A participação do segurado'))) {
-      inCoberturas = false;
-      continue;
+  const cleanNum = (s) => {
+    if (!s) return null;
+    let t = s.replace(/^R\$\s*/i, '').replace(/,\/00/, ',00').replace(/[\/]/g, ',');
+    t = t.replace(/[^\d,\.]/g, '');
+    if (!t) return null;
+
+    if (/\.\d{5}$/.test(t)) {
+      t = t.replace(/(\.\d{3})\d{2}$/, '$1,00');
     }
 
-    if (inCoberturas) {
-      // Regex para linha de cobertura:
-      // Ex: Danos Elétricos R$ 25.000,00 R$ 288,30 20 4.000,00
-      // Ex: Básica Simples R$ 34.650.000,00 R$ 1.188,79 - Sem Franquia
-      // Ex: Assistência 24H R$ 15,85 - Sem Franquia
-      const matchCob = trimmed.match(/^([A-Za-zÀ-ÿ0-9\s\/\(\),–-]+?)(?:\s+R\$\s*([\d\.,]+))?\s+R\$\s*([\d\.,]+)\s+([0-9]+|-)\s+(Sem\s+Franquia|[\d\.,]+|-)?$/i);
-      if (matchCob) {
-        const nome = matchCob[1].trim();
-        let limiteStr = matchCob[2];
-        let precoStr = matchCob[3];
-        let pctStr = matchCob[4];
-        let rsStr = matchCob[5];
+    if (t.includes(',') && t.includes('.')) {
+      t = t.replace(/\./g, '').replace(',', '.');
+    } else if (t.includes(',')) {
+      t = t.replace(',', '.');
+    } else if (t.includes('.')) {
+      const parts = t.split('.');
+      if (parts.length === 2 && parts[1].length === 3) {
+        t = parts[0] + parts[1];
+      }
+    } else if (t.length >= 3) {
+      t = t.slice(0, -2) + '.' + t.slice(-2);
+    }
+    const val = parseFloat(t);
+    return isNaN(val) ? null : val;
+  };
 
-        let limite = limiteStr ? parseMoedaBR(limiteStr) : null;
-        let preco = parseMoedaBR(precoStr);
-        let pct = (pctStr && pctStr !== '-') ? Number(pctStr) : null;
-        let semFranquia = rsStr ? rsStr.toLowerCase().includes('sem') : false;
-        let rs = (!semFranquia && rsStr && rsStr !== '-') ? parseMoedaBR(rsStr) : null;
+  // 1. Busca por catálogo estruturado
+  for (const item of COBERTURAS_CATALOGO) {
+    const rawLine = lines.find((l) => item.regex.test(l));
+    if (rawLine) {
+      let line = rawLine.replace(/^[&\"Eêz3\s—–\.\*]+/, '').trim();
+      const semFranquia = /sem\s*franquia/i.test(line);
 
-        let tipo = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
+      const nameMatch = line.match(item.regex);
+      let rest = line;
+      if (nameMatch) {
+        rest = line.slice(nameMatch.index + nameMatch[0].length).trim();
+      }
 
-        coberturas.push({
-          tipo,
-          nome,
-          nome_personalizado: nome,
-          limite_indenizacao: limite,
-          limite: limite,
-          valor_segurado: limite,
-          preco_cobertura: preco,
-          preco: preco,
-          franquia_percentual: pct,
-          franquia_pct: pct,
-          franquia_reais: rs,
-          franquia_rs: rs,
-          sem_franquia: semFranquia || (pct === null && rs === null) ? 1 : 0
+      const tokens = rest.split(/\s+/).filter(Boolean);
+      let limite = null;
+      let preco = null;
+      let pct = null;
+      let franquiaRs = null;
+
+      if (item.chave === 'assistencia_24h') {
+        limite = null;
+        preco = cleanNum(tokens[0] === 'R$' ? tokens[1] : tokens[0]) || 15.85;
+      } else {
+        const rDollarIndices = [];
+        tokens.forEach((tok, idx) => {
+          if (tok === 'R$' || tok.startsWith('R$')) rDollarIndices.push(idx);
         });
+
+        if (rDollarIndices.length >= 2) {
+          const idx1 = rDollarIndices[0];
+          const tok1 = tokens[idx1] === 'R$' ? tokens[idx1 + 1] : tokens[idx1];
+          limite = cleanNum(tok1);
+
+          const idx2 = rDollarIndices[1];
+          const tok2 = tokens[idx2] === 'R$' ? tokens[idx2 + 1] : tokens[idx2];
+          preco = cleanNum(tok2);
+        } else if (rDollarIndices.length === 1) {
+          const idx1 = rDollarIndices[0];
+          const tok1 = tokens[idx1] === 'R$' ? tokens[idx1 + 1] : tokens[idx1];
+          limite = cleanNum(tok1);
+        }
+
+        if (!semFranquia) {
+          const pMatch = rest.match(/\b(10|15|20|25)\b(?!\s*R\$|\s*000)/);
+          if (pMatch) {
+            pct = parseInt(pMatch[1], 10);
+          }
+          const fMatch = rest.match(/(\d{1,2}\.?\d{3},\d{2}|\d{3},\d{2})\s*$/) || rest.match(/(\d{1,2}\.\d{3},\d{2})/);
+          if (fMatch) {
+            franquiaRs = cleanNum(fMatch[1]);
+          }
+        }
+      }
+
+      coberturas.push({
+        tipo: item.chave,
+        nome: item.nome,
+        nome_personalizado: item.nome,
+        limite,
+        limite_indenizacao: limite,
+        valor_segurado: limite,
+        preco,
+        preco_cobertura: preco,
+        franquia_percentual: pct,
+        franquia_pct: pct,
+        franquia_reais: franquiaRs,
+        franquia_rs: franquiaRs,
+        sem_franquia: semFranquia || (!pct && !franquiaRs) ? 1 : 0
+      });
+    }
+  }
+
+  // 2. Se não encontrou pelo catálogo, tenta parse genérico de linhas entre COBERTURAS
+  if (coberturas.length === 0) {
+    let inCoberturas = false;
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('COBERTURAS')) {
+        inCoberturas = true;
+        continue;
+      }
+      if (inCoberturas && (trimmed.startsWith('INFORMAÇÕES DE PAGAMENTO') || trimmed.startsWith('Prêmio Líquido') || trimmed.startsWith('A participação do segurado'))) {
+        inCoberturas = false;
+        continue;
+      }
+
+      if (inCoberturas) {
+        const matchCob = trimmed.match(/^([A-Za-zÀ-ÿ0-9\s\/\(\),–-]+?)(?:\s+R\$\s*([\d\.,]+))?\s+R\$\s*([\d\.,]+)\s+([0-9]+|-)\s+(Sem\s+Franquia|[\d\.,]+|-)?$/i);
+        if (matchCob) {
+          const nome = matchCob[1].trim();
+          let limite = matchCob[2] ? parseMoedaBR(matchCob[2]) : null;
+          let preco = parseMoedaBR(matchCob[3]);
+          let pct = (matchCob[4] && matchCob[4] !== '-') ? Number(matchCob[4]) : null;
+          let semFranquia = matchCob[5] ? matchCob[5].toLowerCase().includes('sem') : false;
+          let rs = (!semFranquia && matchCob[5] && matchCob[5] !== '-') ? parseMoedaBR(matchCob[5]) : null;
+          let tipo = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
+
+          coberturas.push({
+            tipo,
+            nome,
+            nome_personalizado: nome,
+            limite_indenizacao: limite,
+            limite: limite,
+            valor_segurado: limite,
+            preco_cobertura: preco,
+            preco: preco,
+            franquia_percentual: pct,
+            franquia_pct: pct,
+            franquia_reais: rs,
+            franquia_rs: rs,
+            sem_franquia: semFranquia || (pct === null && rs === null) ? 1 : 0
+          });
+        }
       }
     }
   }
 
-  // Se não extraiu nada da tabela estruturada, aplica fallback padrão
+  // 3. Se ainda não extraiu nada da tabela estruturada, aplica fallback padrão
   if (coberturas.length === 0) {
     const fallbackList = [
       { tipo: 'basica_simples', nome: 'Básica Simples (Incêndio)', limite: lmgPadrao || 5000000, preco: 338.40, franquia_pct: null, franquia_rs: null, sem_franquia: 1 },
@@ -544,20 +749,35 @@ async function extrairDadosApolicePDF(pdfBuffer) {
     let textoBruto = '';
     let paginasLidas = 1;
 
-    if (typeof pdfParse === 'function') {
-      const data = await pdfParse(pdfBuffer);
-      textoBruto = data.text || '';
-      paginasLidas = data.numpages || 1;
-    } else if (pdfParse?.PDFParse) {
-      const parser = new pdfParse.PDFParse({ data: pdfBuffer });
-      const textResult = await parser.getText();
-      textoBruto = textResult.text || (textResult.pages ? textResult.pages.map((p) => p.text).join('\n') : '');
-      paginasLidas = textResult.total || (textResult.pages ? textResult.pages.length : 1);
+    try {
+      if (typeof pdfParse === 'function') {
+        const data = await pdfParse(pdfBuffer);
+        textoBruto = data.text || '';
+        paginasLidas = data.numpages || 1;
+      } else if (pdfParse?.PDFParse) {
+        const parser = new pdfParse.PDFParse({ data: pdfBuffer });
+        const textResult = await parser.getText();
+        textoBruto = textResult.text || (textResult.pages ? textResult.pages.map((p) => p.text).join('\n') : '');
+        paginasLidas = textResult.total || (textResult.pages ? textResult.pages.length : 1);
+        try {
+          await parser.destroy();
+        } catch (e) {}
+      }
+    } catch (e) {
+      console.warn('[apoliceParser] Leitura direta do PDF falhou, tentando OCR:', e.message);
+    }
+
+    // Se o texto direto estiver vazio ou muito curto (< 80 chars), aciona OCR de alta precisão
+    if (!textoBruto || textoBruto.replace(/\s+/g, '').length < 80) {
       try {
-        await parser.destroy();
-      } catch (e) {}
-    } else {
-      throw new Error('Módulo de leitura de PDF indisponível.');
+        const { buffers, totalPages } = await renderPdfPagesToPng(pdfBuffer, 3);
+        if (buffers && buffers.length > 0) {
+          textoBruto = await extrairTextoViaOcr(buffers);
+          paginasLidas = totalPages || buffers.length;
+        }
+      } catch (ocrErr) {
+        console.warn('[apoliceParser] Fallback OCR via PyMuPDF/Tesseract falhou:', ocrErr.message);
+      }
     }
 
     const texto = cleanText(textoBruto);

@@ -465,6 +465,16 @@ export default function SeguroNovoEditarDrawer({
 
   const totalIncendioCalculado = Number(coberturaPorUnidade || 0) * Number(qtdApartamentos || 0);
 
+  const totalPrecoCoberturas = (coberturas || []).reduce((acc, c) => {
+    const val = Number(c.preco_cobertura ?? c.premio ?? c.preco ?? 0);
+    return acc + (isNaN(val) ? 0 : val);
+  }, 0);
+
+  const totalLmiCoberturas = (coberturas || []).reduce((acc, c) => {
+    const val = Number(c.valor_segurado ?? c.valor_total_calculado ?? c.limite ?? 0);
+    return acc + (isNaN(val) ? 0 : val);
+  }, 0);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!condominioId) {
@@ -623,12 +633,12 @@ export default function SeguroNovoEditarDrawer({
     <div className={`seg-drawer ${aberto ? 'open' : ''}`}>
       <div className="seg-drawer-header">
         <div>
-          <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>
+          <h2 style={{ margin: 0, fontSize: '18px', color: 'var(--text-primary)' }}>
             {seguroEditando
               ? `Editar Seguro — ${codigoCondominioSelecionado ? `[${codigoCondominioSelecionado}] ` : ''}${nomeCondominioSelecionado}`
               : 'Novo Registro de Seguro'}
           </h2>
-          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
             {seguroEditando
               ? `Atualizando informações do seguro e dados cadastrais do condomínio ${nomeCondominioSelecionado}`
               : 'Preencha as informações completas da apólice e anexe os documentos'}
@@ -673,7 +683,7 @@ export default function SeguroNovoEditarDrawer({
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
         <div className="seg-drawer-body">
           {erro && (
-            <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '10px 14px', borderRadius: '8px', fontSize: '13px' }}>
+            <div style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)', border: '1px solid var(--danger)', padding: '10px 14px', borderRadius: '8px', fontSize: '13px' }}>
               {erro}
             </div>
           )}
@@ -774,14 +784,14 @@ export default function SeguroNovoEditarDrawer({
                 )}
               </div>
 
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '4px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '4px' }}>
                 Dados da Apólice & Risco
               </div>
 
               <div className="seg-filter-group">
                 <label>Condomínio *</label>
                 {seguroEditando ? (
-                  <div style={{ padding: '10px 12px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>
+                  <div style={{ padding: '10px 12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border)', borderRadius: '8px', fontWeight: 700, color: 'var(--text-primary)', fontSize: '14px' }}>
                     {codigoCondominioSelecionado ? `[${codigoCondominioSelecionado}] ` : ''}{nomeCondominioSelecionado || 'Condomínio selecionado'}
                   </div>
                 ) : (
@@ -954,17 +964,17 @@ export default function SeguroNovoEditarDrawer({
               </div>
 
               {/* Anexo Rápido de Apólice */}
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', marginTop: '6px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', marginTop: '6px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <IcoUpload /> Anexar Arquivo da Apólice (PDF Oficial)
                 </div>
                 <input
                   type="file"
                   className="seg-input"
-                  style={{ width: '100%', background: '#ffffff' }}
+                  style={{ width: '100%', background: 'var(--bg-surface)' }}
                   onChange={(e) => setArquivoApolice(e.target.files[0] || null)}
                 />
-                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
                   O arquivo será salvo automaticamente na estrutura oficial: <code>CONDOMÍNIOS/SEGUROS/[ano]/[codigo_condominio]/</code>
                 </div>
               </div>
@@ -974,45 +984,45 @@ export default function SeguroNovoEditarDrawer({
           {/* 2. DOCUMENTOS & BOLETOS */}
           {abaAtiva === 'documentos' && (
             <div className="seg-card-section">
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 📂 Anexar Apólice, Boletos e Propostas
               </div>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
-                Estrutura de nuvem: <code style={{ background: '#f1f5f9', padding: '2px 5px', borderRadius: '4px', color: '#0369a1' }}>CONDOMÍNIOS/SEGUROS/{vigenciaFim ? vigenciaFim.split('-')[0] : '2026'}/{String(condominioId || '001').padStart(3, '0')}/</code>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
+                Estrutura de nuvem: <code style={{ background: 'var(--bg-surface-elevated)', padding: '2px 5px', borderRadius: '4px', color: 'var(--primary)' }}>CONDOMÍNIOS/SEGUROS/{vigenciaFim ? vigenciaFim.split('-')[0] : '2026'}/{String(condominioId || '001').padStart(3, '0')}/</code>
               </p>
 
               {/* Upload Apólice */}
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px' }}>
-                <label style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
                   📄 1. Arquivo da Apólice (PDF Principal)
                 </label>
                 <input
                   type="file"
                   className="seg-input"
-                  style={{ width: '100%', background: '#ffffff' }}
+                  style={{ width: '100%', background: 'var(--bg-surface)' }}
                   onChange={(e) => setArquivoApolice(e.target.files[0] || null)}
                 />
                 {arquivoApolice && (
-                  <div style={{ fontSize: '12px', color: '#16a34a', fontWeight: 600, marginTop: '4px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 600, marginTop: '4px' }}>
                     ✓ Arquivo selecionado: {arquivoApolice.name} ({(arquivoApolice.size / 1024).toFixed(1)} KB)
                   </div>
                 )}
               </div>
 
               {/* Upload Boletos */}
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px' }}>
-                <label style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
                   💳 2. Boletos / Comprovantes de Parcelas (Múltiplos arquivos)
                 </label>
                 <input
                   type="file"
                   multiple
                   className="seg-input"
-                  style={{ width: '100%', background: '#ffffff' }}
+                  style={{ width: '100%', background: 'var(--bg-surface)' }}
                   onChange={(e) => setArquivosBoletos(Array.from(e.target.files || []))}
                 />
                 {arquivosBoletos.length > 0 && (
-                  <div style={{ fontSize: '12px', color: '#16a34a', fontWeight: 600, marginTop: '4px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 600, marginTop: '4px' }}>
                     ✓ {arquivosBoletos.length} boleto(s) selecionado(s) para upload
                   </div>
                 )}
@@ -1021,7 +1031,7 @@ export default function SeguroNovoEditarDrawer({
               {/* Documentos já existentes */}
               {documentosExistentes.length > 0 && (
                 <div style={{ marginTop: '8px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>
                     Documentos já cadastrados neste seguro ({documentosExistentes.length}):
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1029,8 +1039,8 @@ export default function SeguroNovoEditarDrawer({
                       <div
                         key={doc.id}
                         style={{
-                          background: '#ffffff',
-                          border: '1px solid #e2e8f0',
+                          background: 'var(--bg-surface)',
+                          border: '1px solid var(--border)',
                           borderRadius: '8px',
                           padding: '10px 12px',
                           display: 'flex',
@@ -1040,8 +1050,8 @@ export default function SeguroNovoEditarDrawer({
                         }}
                       >
                         <div>
-                          <span style={{ fontWeight: 600, fontSize: '13px', color: '#0f172a' }}>{doc.nome_arquivo}</span>
-                          <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>({doc.tipo})</span>
+                          <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>{doc.nome_arquivo}</span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '8px' }}>({doc.tipo})</span>
                         </div>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <a
@@ -1056,7 +1066,7 @@ export default function SeguroNovoEditarDrawer({
                           <button
                             type="button"
                             className="seg-btn-icon"
-                            style={{ color: '#dc2626', width: '28px', height: '28px' }}
+                            style={{ color: 'var(--danger)', width: '28px', height: '28px' }}
                             onClick={() => handleExcluirDocExistente(doc.id, doc.nome_arquivo)}
                           >
                             <IcoTrash />
@@ -1074,27 +1084,34 @@ export default function SeguroNovoEditarDrawer({
           {abaAtiva === 'coberturas' && (
             <div className="seg-card-section">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Configuração de Coberturas & Valores {coberturas.length > 0 ? `(${coberturas.length} coberturas)` : ''}
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    🛡️ Configuração de Coberturas & Valores
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    {coberturas.length > 0 ? `${coberturas.length} coberturas cadastradas na apólice` : 'Nenhuma cobertura adicionada'}
+                  </div>
                 </div>
                 <button
                   type="button"
-                  className="seg-btn-outline"
-                  style={{ padding: '4px 10px', fontSize: '12px' }}
+                  className="seg-btn-primary"
+                  style={{ padding: '6px 14px', fontSize: '12px', boxShadow: 'none' }}
                   onClick={handleAdicionarCobertura}
                 >
                   + Adicionar Cobertura
                 </button>
               </div>
 
-              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div className="seg-filter-group">
-                    <label>Cobertura por Unidade / Imóvel (R$) *</label>
+              {/* Stats & Multiplier Summary Bar */}
+              <div className="seg-cov-stats-grid">
+                <div className="seg-cov-stat-card">
+                  <span className="seg-cov-stat-label">Cobertura por Unidade</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                     <input
                       type="number"
                       step="1000"
-                      className="seg-input"
+                      className="seg-cell-input text-right"
+                      style={{ fontWeight: 700, fontSize: '14px', maxWidth: '140px' }}
                       value={coberturaPorUnidade}
                       onChange={(e) => {
                         const val = Number(e.target.value) || 0;
@@ -1117,147 +1134,143 @@ export default function SeguroNovoEditarDrawer({
                       }}
                       required
                     />
-                    <span style={{ fontSize: '12px', color: '#0284c7', fontWeight: 600, marginTop: '2px' }}>
-                      {Number(coberturaPorUnidade || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} por imóvel
-                    </span>
                   </div>
-
-                  <div className="seg-filter-group">
-                    <label>Qtd. de Unidades / Apartamentos</label>
-                    <input
-                      type="number"
-                      className="seg-input"
-                      value={qtdApartamentos}
-                      onChange={(e) => {
-                        const apts = Number(e.target.value) || 0;
-                        setQtdApartamentos(apts);
-                        setCoberturas((prev) =>
-                          prev.map((c) => {
-                            if (c.tipo === 'basica_simples' || (c.nome_personalizado && c.nome_personalizado.toLowerCase().includes('básica'))) {
-                              const unitVal = Number(coberturaPorUnidade) || 0;
-                              return {
-                                ...c,
-                                valor_por_imovel: unitVal,
-                                quantidade_imoveis: apts,
-                                valor_segurado: unitVal * apts,
-                                valor_total_calculado: unitVal * apts
-                              };
-                            }
-                            return c;
-                          })
-                        );
-                      }}
-                      disabled={!podeEditarCadastrais}
-                    />
-                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    × {qtdApartamentos} unidades cadastradas
+                  </span>
                 </div>
 
-                <div className="seg-coverage-total-calc" style={{ background: '#ffffff', border: '1px solid #e0f2fe' }}>
-                  <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700, textTransform: 'uppercase' }}>
-                    Soma Automática — Cobertura Básica / Incêndio:
-                  </span>
-                  <span style={{ fontSize: '20px', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>
+                <div className="seg-cov-stat-card highlight">
+                  <span className="seg-cov-stat-label">Total Cobertura Básica (Incêndio)</span>
+                  <span className="seg-cov-stat-value">
                     {totalIncendioCalculado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </span>
-                  <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                    Multiplicação: R$ {Number(coberturaPorUnidade || 0).toLocaleString('pt-BR')} × {qtdApartamentos} unidades
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {coberturaPorUnidade ? `R$ ${Number(coberturaPorUnidade).toLocaleString('pt-BR')} × ${qtdApartamentos} aptos` : 'Multiplicação automática'}
+                  </span>
+                </div>
+
+                <div className="seg-cov-stat-card">
+                  <span className="seg-cov-stat-label">Total Prêmio / Coberturas</span>
+                  <span className="seg-cov-stat-value" style={{ color: 'var(--primary)' }}>
+                    {totalPrecoCoberturas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Soma de {coberturas.length} coberturas
                   </span>
                 </div>
               </div>
 
               {/* Tabela de Todas as Coberturas */}
-              {coberturas.length > 0 && (
-                <div style={{ marginTop: '12px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', marginBottom: '8px' }}>
-                    Tabela de Coberturas da Apólice ({coberturas.length} itens):
+              {coberturas.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--bg-surface-elevated)', borderRadius: '10px', border: '1px dashed var(--border)' }}>
+                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>📋</div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px' }}>Nenhuma cobertura adicionada</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: '14px' }}>
+                    Faça o upload do PDF da apólice na Aba 1 para extrair automaticamente todas as coberturas ou adicione manualmente.
                   </div>
-                  <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                      <thead>
-                        <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', color: '#0f172a' }}>
-                          <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700 }}>COBERTURA</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, minWidth: '130px' }}>LMI (R$)</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, minWidth: '100px' }}>Preço (R$)</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, minWidth: '80px' }}>Franquia %</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, minWidth: '100px' }}>Franquia R$</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'center', width: '36px' }}></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {coberturas.map((cob, idx) => {
-                          const isBasica = cob.tipo === 'basica_simples' || (cob.nome_personalizado && cob.nome_personalizado.toLowerCase().includes('básica'));
-                          return (
-                            <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                              <td style={{ padding: '6px 10px' }}>
+                  <button
+                    type="button"
+                    className="seg-btn-outline"
+                    onClick={handleAdicionarCobertura}
+                  >
+                    + Adicionar Cobertura Manualmente
+                  </button>
+                </div>
+              ) : (
+                <div className="seg-cov-table-wrap">
+                  <table className="seg-cov-table">
+                    <thead>
+                      <tr>
+                        <th style={{ minWidth: '220px' }}>COBERTURA</th>
+                        <th style={{ textAlign: 'right', minWidth: '140px' }}>LMI (R$)</th>
+                        <th style={{ textAlign: 'right', minWidth: '120px' }}>Preço (R$)</th>
+                        <th style={{ textAlign: 'center', minWidth: '80px' }}>Franquia %</th>
+                        <th style={{ textAlign: 'right', minWidth: '130px' }}>Franquia R$</th>
+                        <th style={{ textAlign: 'center', width: '40px' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {coberturas.map((cob, idx) => {
+                        const isBasica = cob.tipo === 'basica_simples' || (cob.nome_personalizado && cob.nome_personalizado.toLowerCase().includes('básica'));
+                        const nomeCob = cob.nome_personalizado || cob.nome || cob.tipo || '';
+                        return (
+                          <tr key={idx} className={isBasica ? 'is-basica' : ''}>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                                 <input
                                   type="text"
-                                  className="seg-input"
-                                  style={{ padding: '4px 8px', fontSize: '12px', fontWeight: isBasica ? 700 : 500 }}
-                                  value={cob.nome_personalizado || cob.nome || cob.tipo || ''}
+                                  className={`seg-cell-input ${isBasica ? 'is-basica-name' : ''}`}
+                                  value={nomeCob}
+                                  placeholder="Nome da cobertura"
                                   onChange={(e) => handleUpdateCobertura(idx, 'nome_personalizado', e.target.value)}
                                 />
-                              </td>
-                              <td style={{ padding: '6px 10px', textAlign: 'right' }}>
-                                <input
-                                  type="number"
-                                  className="seg-input"
-                                  style={{ padding: '4px 8px', fontSize: '12px', textAlign: 'right', fontWeight: 700, color: isBasica ? '#16a34a' : 'inherit' }}
-                                  value={cob.valor_segurado ?? cob.valor_total_calculado ?? cob.limite ?? 0}
-                                  onChange={(e) => {
-                                    const v = Number(e.target.value) || 0;
-                                    handleUpdateCobertura(idx, 'valor_segurado', v);
-                                    handleUpdateCobertura(idx, 'valor_total_calculado', v);
-                                  }}
-                                />
-                              </td>
-                              <td style={{ padding: '6px 10px', textAlign: 'right' }}>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  className="seg-input"
-                                  style={{ padding: '4px 8px', fontSize: '12px', textAlign: 'right' }}
-                                  value={cob.preco_cobertura ?? cob.premio ?? cob.preco ?? ''}
-                                  onChange={(e) => handleUpdateCobertura(idx, 'preco_cobertura', parseFloat(e.target.value) || 0)}
-                                />
-                              </td>
-                              <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                                <input
-                                  type="number"
-                                  className="seg-input"
-                                  style={{ padding: '4px 8px', fontSize: '12px', textAlign: 'center' }}
-                                  placeholder="-"
-                                  value={cob.franquia_percentual ?? cob.franquia_pct ?? ''}
-                                  onChange={(e) => handleUpdateCobertura(idx, 'franquia_percentual', e.target.value ? Number(e.target.value) : null)}
-                                />
-                              </td>
-                              <td style={{ padding: '6px 10px', textAlign: 'right' }}>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  className="seg-input"
-                                  style={{ padding: '4px 8px', fontSize: '12px', textAlign: 'right' }}
-                                  placeholder={cob.sem_franquia ? 'Sem Franquia' : '-'}
-                                  value={cob.franquia_reais ?? cob.franquia_rs ?? ''}
-                                  onChange={(e) => handleUpdateCobertura(idx, 'franquia_reais', e.target.value ? Number(e.target.value) : null)}
-                                />
-                              </td>
-                              <td style={{ padding: '6px 6px', textAlign: 'center' }}>
-                                <button
-                                  type="button"
-                                  className="seg-btn-icon"
-                                  style={{ color: '#dc2626', width: '24px', height: '24px', fontSize: '14px', border: 'none', background: 'transparent', cursor: 'pointer' }}
-                                  onClick={() => handleRemoverCobertura(idx)}
-                                  title="Remover cobertura"
-                                >
-                                  &times;
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                                {isBasica && (
+                                  <span className="seg-badge-pill success" style={{ alignSelf: 'flex-start' }}>
+                                    ✓ Cobertura Básica Principal
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                step="1000"
+                                className={`seg-cell-input text-right ${isBasica ? 'is-basica-val' : ''}`}
+                                value={cob.valor_segurado ?? cob.valor_total_calculado ?? cob.limite ?? 0}
+                                onChange={(e) => {
+                                  const v = Number(e.target.value) || 0;
+                                  handleUpdateCobertura(idx, 'valor_segurado', v);
+                                  handleUpdateCobertura(idx, 'valor_total_calculado', v);
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                step="0.01"
+                                className="seg-cell-input text-right"
+                                placeholder="0,00"
+                                value={cob.preco_cobertura ?? cob.premio ?? cob.preco ?? ''}
+                                onChange={(e) => handleUpdateCobertura(idx, 'preco_cobertura', e.target.value !== '' ? parseFloat(e.target.value) : null)}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                step="1"
+                                className="seg-cell-input text-center"
+                                placeholder="—"
+                                value={cob.franquia_percentual ?? cob.franquia_pct ?? ''}
+                                onChange={(e) => handleUpdateCobertura(idx, 'franquia_percentual', e.target.value !== '' ? Number(e.target.value) : null)}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                step="0.01"
+                                className="seg-cell-input text-right"
+                                placeholder={cob.sem_franquia ? 'Sem Franquia' : '—'}
+                                value={cob.franquia_reais ?? cob.franquia_rs ?? ''}
+                                onChange={(e) => handleUpdateCobertura(idx, 'franquia_reais', e.target.value !== '' ? Number(e.target.value) : null)}
+                              />
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                className="seg-btn-icon"
+                                style={{ color: 'var(--danger)', width: '28px', height: '28px', fontSize: '15px' }}
+                                onClick={() => handleRemoverCobertura(idx)}
+                                title="Remover cobertura"
+                              >
+                                &times;
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -1267,11 +1280,11 @@ export default function SeguroNovoEditarDrawer({
           {abaAtiva === 'condominio' && (
             <div className="seg-card-section">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Informações Cadastrais do Condomínio
                 </div>
                 {!podeEditarCadastrais && (
-                  <span style={{ fontSize: '11px', background: '#fef3c7', color: '#b45309', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                  <span style={{ fontSize: '11px', background: 'var(--warning-soft)', color: 'var(--warning-text)', border: '1px solid var(--warning)', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
                     🔒 Somente Leitura para Corretora
                   </span>
                 )}

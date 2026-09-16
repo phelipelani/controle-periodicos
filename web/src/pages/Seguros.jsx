@@ -362,6 +362,7 @@ export default function Seguros() {
           dados={dadosOrdenados}
           carregando={carregando}
           isAdmin={isAdmin}
+          drawerAberto={drawerAbertoGeral}
           onVisualizar={handleVisualizar}
           onEditar={handleEditar}
           onRenovar={handleRenovar}

@@ -40,6 +40,7 @@ export default function SegurosTable({
   dados,
   carregando,
   isAdmin,
+  drawerAberto,
   onVisualizar,
   onEditar,
   onRenovar,
@@ -75,6 +76,8 @@ export default function SegurosTable({
     return ordemDirecao === 'asc' ? <IcoSortAsc /> : <IcoSortDesc />;
   };
 
+  const colSpanCount = drawerAberto ? 7 : 9;
+
   return (
     <div className="seg-table-card">
       <div className="seg-table-wrap">
@@ -90,10 +93,12 @@ export default function SegurosTable({
               <th className="sortable" onClick={() => onOrdenar('seguradora')}>
                 Seguradora {renderSortIcon('seguradora')}
               </th>
-              <th className="sortable" onClick={() => onOrdenar('corretora')}>
-                Corretora {renderSortIcon('corretora')}
-              </th>
-              <th>Gerente</th>
+              {!drawerAberto && (
+                <th className="sortable" onClick={() => onOrdenar('corretora')}>
+                  Corretora {renderSortIcon('corretora')}
+                </th>
+              )}
+              {!drawerAberto && <th>Gerente</th>}
               <th>Data renovação</th>
               <th className="sortable" onClick={() => onOrdenar('validade')}>
                 Data validade {renderSortIcon('validade')}
@@ -107,13 +112,13 @@ export default function SegurosTable({
           <tbody>
             {carregando ? (
               <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                <td colSpan={colSpanCount} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                   Carregando seguros...
                 </td>
               </tr>
             ) : itensPaginados.length === 0 ? (
               <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                <td colSpan={colSpanCount} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                   Nenhum registro de seguro encontrado com os filtros selecionados.
                 </td>
               </tr>
@@ -127,8 +132,8 @@ export default function SegurosTable({
                     <div className="seg-condo-title">{item.condominio}</div>
                   </td>
                   <td>{item.seguradora}</td>
-                  <td>{item.corretora}</td>
-                  <td>{item.gerente}</td>
+                  {!drawerAberto && <td>{item.corretora}</td>}
+                  {!drawerAberto && <td>{item.gerente}</td>}
                   <td>{formatarData(item.dataRenovacao)}</td>
                   <td>
                     <span style={{ fontWeight: 600 }}>{formatarData(item.dataValidade)}</span>
