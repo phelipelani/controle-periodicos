@@ -11,12 +11,15 @@ import {
 import DedetizacaoTable from '../components/dedetizacao/DedetizacaoTable';
 import DedetizacaoDrawer from '../components/dedetizacao/DedetizacaoDrawer';
 import DedetizacaoModalVisualizar from '../components/dedetizacao/DedetizacaoModalVisualizar';
+import AgendamentoAdesoesDrawer from '../components/agendamentos/AgendamentoAdesoesDrawer';
 
 export default function Dedetizacao() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState('novo'); // 'novo' | 'execucao'
+  const [drawerTab, setDrawerTab] = useState('agendamento');
   const [activeRow, setActiveRow] = useState(null);
   const [itemVisualizando, setItemVisualizando] = useState(null);
+  const [itemAdesoes, setItemAdesoes] = useState(null);
   const [dadosBrutos, setDadosBrutos] = useState([]);
   const [usuariosEmpresas, setUsuariosEmpresas] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -70,6 +73,11 @@ export default function Dedetizacao() {
             agendamento_observacao: r.agendamento_observacao || '',
             historico_id: r.historico_id,
             observacao: r.observacoes || '',
+            token_adesao: r.token_adesao || null,
+            valor_area_comum: r.valor_area_comum ?? 0,
+            tipos_unidades: r.tipos_unidades || null,
+            orientacoes: r.orientacoes || null,
+            total_adesoes: r.total_adesoes || 0,
             // also keep raw dates for filtering
             raw_data_execucao: r.data_execucao
           };
@@ -253,8 +261,6 @@ export default function Dedetizacao() {
     };
   }, [dadosBrutos, filtros.busca, filtros.empresa, filtros.dataInicio, filtros.dataFim]);
 
-  const [drawerTab, setDrawerTab] = useState('agendamento');
-
   const handleNovoAgendamento = () => {
     setDrawerMode('novo');
     setDrawerTab('agendamento');
@@ -310,6 +316,17 @@ export default function Dedetizacao() {
               data={dadosOrdenados} 
               onEdit={handleEdit} 
               onVisualizar={(row) => setItemVisualizando(row)}
+              onVerAdesoes={(row) => setItemAdesoes({
+                id: row.agendamento_id,
+                condominio_nome: row.condominio,
+                data_agendada: row.raw_data_agendada,
+                periodo: row.periodoAgendado,
+                empresa: row.empresa,
+                token_adesao: row.token_adesao,
+                valor_area_comum: row.valor_area_comum,
+                tipos_unidades: row.tipos_unidades,
+                orientacoes: row.orientacoes
+              })}
               colunaOrdenacao={colunaOrdenacao}
               ordemDirecao={ordemDirecao}
               onOrdenar={handleOrdenar}
@@ -335,6 +352,15 @@ export default function Dedetizacao() {
           item={itemVisualizando}
           onFechar={() => setItemVisualizando(null)}
           onReciboExcluido={carregarDados}
+        />
+      )}
+
+      {itemAdesoes && (
+        <AgendamentoAdesoesDrawer
+          open={!!itemAdesoes}
+          onClose={() => setItemAdesoes(null)}
+          agendamento={itemAdesoes}
+          onAtualizar={carregarDados}
         />
       )}
     </div>

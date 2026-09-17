@@ -1,0 +1,1026 @@
+/* ==========================================================================
+   PORTAL DE ADESÃO DO MORADOR — DEDETIZAÇÃO iMCOSTA
+   MOBILE-FIRST, LIGHT-MODE ISOLADO, ACESSÍVEL E MODERNO
+   ========================================================================== */
+
+.adesao-page {
+  --ad-primary: #7C3AED;
+  --ad-primary-hover: #6D28D9;
+  --ad-primary-light: #8B5CF6;
+  --ad-primary-soft: #FAF7FF;
+  --ad-primary-glow: rgba(124, 58, 237, 0.2);
+  --ad-gradient: linear-gradient(135deg, #7C3AED 0%, #C026D3 100%);
+  --ad-gradient-hover: linear-gradient(135deg, #6D28D9 0%, #A21CAF 100%);
+  
+  --ad-bg: #F5F7FB;
+  --ad-card: #FFFFFF;
+  --ad-card-inner: #F8FAFC;
+  --ad-border: #E2E8F0;
+  --ad-border-focus: #7C3AED;
+  
+  --ad-text: #172033;
+  --ad-text-secondary: #5B6880;
+  --ad-text-muted: #8290A6;
+  
+  --ad-green: #22C55E;
+  --ad-green-light: #ECFDF3;
+  --ad-green-text: #15803D;
+  
+  --ad-yellow: #F59E0B;
+  --ad-yellow-light: #FFF7E6;
+  --ad-yellow-text: #B45309;
+  
+  --ad-blue: #3B82F6;
+  --ad-blue-light: #EFF6FF;
+  --ad-blue-text: #1D4ED8;
+  
+  --ad-red: #EF4444;
+  --ad-red-light: #FEF2F2;
+  --ad-red-text: #B91C1C;
+
+  min-height: 100vh;
+  background-color: var(--ad-bg);
+  color: var(--ad-text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.adesao-page * {
+  box-sizing: border-box;
+}
+
+/* Container Principal */
+.adesao-container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px 16px 36px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.adesao-header {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.adesao-logo-wrap {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.adesao-logo-img {
+  height: 42px;
+  max-width: 200px;
+  object-fit: contain;
+}
+
+.adesao-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ad-primary-soft);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  color: var(--ad-primary);
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.adesao-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ad-text);
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+.adesao-subtitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ad-text-secondary);
+  margin: 0;
+}
+
+/* Metadados do Agendamento (Cards resumidos) */
+.adesao-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 680px;
+  margin: 16px auto 20px;
+}
+
+.adesao-meta-chip {
+  background: var(--ad-card);
+  border: 1px solid var(--ad-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.adesao-meta-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ad-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.adesao-meta-val {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ad-text);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Barra de Progresso / Etapas */
+.adesao-steps {
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto 24px;
+  background: var(--ad-card);
+  border: 1px solid var(--ad-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.adesao-steps-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.adesao-steps-text {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ad-text);
+}
+
+.adesao-steps-pill {
+  background: var(--ad-primary-soft);
+  color: var(--ad-primary);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.adesao-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: 9999px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.adesao-progress-fill {
+  height: 100%;
+  background: var(--ad-gradient);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.adesao-steps-desktop {
+  display: none;
+}
+
+/* Layout Responsivo (Mobile: 1 coluna, Desktop: 2 colunas com sidebar sticky) */
+.adesao-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.adesao-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.adesao-sidebar {
+  display: none;
+}
+
+/* Cards das Etapas */
+.adesao-card {
+  background: var(--ad-card);
+  border: 1px solid var(--ad-border);
+  border-radius: 16px;
+  padding: 20px 18px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.adesao-section-header {
+  margin-bottom: 18px;
+}
+
+.adesao-section-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--ad-text);
+  margin: 0 0 4px 0;
+  letter-spacing: -0.01em;
+}
+
+.adesao-section-subtitle {
+  font-size: 14px;
+  color: var(--ad-text-secondary);
+  margin: 0;
+}
+
+/* Cards de Escolha de Serviço (Etapa 1) */
+.service-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.service-card {
+  border: 2px solid var(--ad-border);
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--ad-card);
+  cursor: pointer;
+  transition: all 0.22s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.service-card:hover {
+  border-color: var(--ad-primary-light);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.08);
+}
+
+.service-card.selected {
+  border-color: var(--ad-primary);
+  background: var(--ad-primary-soft);
+  box-shadow: 0 0 0 1px var(--ad-primary), 0 6px 20px rgba(124, 58, 237, 0.12);
+}
+
+.service-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.service-badge-popular {
+  background: #FEF3C7;
+  color: #92400E;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.service-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ad-text);
+  margin: 0;
+}
+
+.service-card.selected .service-title {
+  color: var(--ad-primary);
+}
+
+.service-price-box {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.service-price-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ad-text);
+}
+
+.service-card.selected .service-price-val {
+  color: var(--ad-primary);
+}
+
+.service-price-sub {
+  font-size: 11px;
+  color: var(--ad-text-muted);
+  display: block;
+}
+
+.service-desc {
+  font-size: 13.5px;
+  color: var(--ad-text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.service-benefits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(0,0,0,0.06);
+}
+
+.service-benefit-item {
+  font-size: 13px;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.service-benefit-check {
+  color: var(--ad-green);
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.service-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+.service-btn-learn-more {
+  background: transparent;
+  border: none;
+  color: var(--ad-primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.service-btn-learn-more:hover {
+  color: var(--ad-primary-hover);
+}
+
+.service-selected-pill {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ad-primary);
+  background: #FFFFFF;
+  border: 1px solid var(--ad-primary);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Formulário de Dados da Unidade (Etapa 2) */
+.form-group {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ad-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form-label-required {
+  color: var(--ad-primary);
+  font-weight: 700;
+}
+
+.form-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  font-size: 16px;
+  color: var(--ad-text);
+  background: #FFFFFF;
+  border: 1.5px solid var(--ad-border);
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.form-input:focus {
+  border-color: var(--ad-border-focus);
+  box-shadow: 0 0 0 3px var(--ad-primary-glow);
+  background: #FFFFFF;
+}
+
+.form-input.error {
+  border-color: var(--ad-red);
+  background: #FFF5F5;
+}
+
+.form-textarea {
+  width: 100%;
+  min-height: 85px;
+  padding: 12px 14px;
+  font-size: 15px;
+  color: var(--ad-text);
+  background: #FFFFFF;
+  border: 1.5px solid var(--ad-border);
+  border-radius: 10px;
+  outline: none;
+  resize: vertical;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.form-textarea:focus {
+  border-color: var(--ad-border-focus);
+  box-shadow: 0 0 0 3px var(--ad-primary-glow);
+}
+
+.form-help-text {
+  font-size: 12.5px;
+  color: var(--ad-text-muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.form-error-msg {
+  font-size: 12px;
+  color: var(--ad-red);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Etapa 3 — Resumo e Confirmação */
+.confirmation-summary-box {
+  background: var(--ad-card-inner);
+  border: 1px solid var(--ad-border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conf-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--ad-border);
+}
+
+.conf-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.conf-label {
+  color: var(--ad-text-secondary);
+}
+
+.conf-val {
+  font-weight: 700;
+  color: var(--ad-text);
+  text-align: right;
+}
+
+.conf-val.highlight {
+  color: var(--ad-primary);
+  font-size: 16px;
+}
+
+/* Aviso de Cobrança */
+.adesao-billing-card {
+  background: #EFF6FF;
+  border: 1.5px solid #BFDBFE;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  color: #1E40AF;
+  line-height: 1.45;
+}
+
+.adesao-billing-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Card de Orientações de Segurança */
+.adesao-safety-card {
+  background: #FFFBEB;
+  border: 1.5px solid #FDE68A;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.safety-header {
+  font-size: 14px;
+  font-weight: 800;
+  color: #92400E;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.safety-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: #78350F;
+  line-height: 1.5;
+}
+
+.safety-link-modal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  background: transparent;
+  border: none;
+  color: #92400E;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.safety-link-modal:hover {
+  color: #78350F;
+}
+
+/* Checkbox de Aceite */
+.adesao-checkbox-wrap {
+  margin: 18px 0 20px;
+  background: #FFFFFF;
+  border: 1.5px solid var(--ad-border);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.adesao-checkbox-wrap:hover {
+  border-color: var(--ad-primary-light);
+  background: var(--ad-primary-soft);
+}
+
+.adesao-checkbox-wrap.checked {
+  border-color: var(--ad-primary);
+  background: var(--ad-primary-soft);
+}
+
+.adesao-checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--ad-primary);
+  cursor: pointer;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.adesao-checkbox-label {
+  font-size: 13.5px;
+  color: var(--ad-text);
+  line-height: 1.45;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Botões de Ação */
+.adesao-actions-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn-primary-gradient {
+  background: var(--ad-gradient);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  min-height: 52px;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.3);
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.btn-primary-gradient:hover:not(:disabled) {
+  background: var(--ad-gradient-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.4);
+}
+
+.btn-primary-gradient:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.btn-primary-gradient:disabled {
+  background: #CBD5E1;
+  color: #64748B;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-secondary-outline {
+  background: #FFFFFF;
+  color: var(--ad-text-secondary);
+  border: 1.5px solid var(--ad-border);
+  border-radius: 12px;
+  min-height: 52px;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary-outline:hover {
+  background: var(--ad-card-inner);
+  border-color: #CBD5E1;
+  color: var(--ad-text);
+}
+
+/* Modais / Bottom Sheets */
+.adesao-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  animation: fadeInOverlay 0.2s ease-out;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.adesao-modal-card {
+  background: #FFFFFF;
+  width: 100%;
+  max-height: 92vh;
+  border-radius: 20px 20px 0 0;
+  padding: 20px 18px 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 -10px 25px rgba(0,0,0,0.15);
+  animation: slideUpSheet 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpSheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ad-border);
+  margin-bottom: 14px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ad-text);
+  margin: 0;
+}
+
+.modal-close-btn {
+  background: #F1F5F9;
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #64748B;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.modal-body {
+  overflow-y: auto;
+  padding-right: 4px;
+  flex: 1;
+}
+
+.modal-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ad-border);
+}
+
+/* Seções do Modal de Detalhes */
+.modal-detail-box {
+  background: var(--ad-card-inner);
+  border: 1px solid var(--ad-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.modal-detail-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ad-text);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modal-detail-text {
+  font-size: 13px;
+  color: var(--ad-text-secondary);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Tela de Sucesso */
+.adesao-success-card {
+  background: #FFFFFF;
+  border: 1px solid var(--ad-border);
+  border-radius: 20px;
+  padding: 28px 20px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  max-width: 580px;
+  margin: 20px auto;
+}
+
+.success-icon-badge {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: var(--ad-green-light);
+  color: var(--ad-green);
+  font-size: 34px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  border: 2px solid #86EFAC;
+}
+
+.success-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ad-green-text);
+  margin: 0 0 6px 0;
+}
+
+.success-msg {
+  font-size: 15px;
+  color: var(--ad-text-secondary);
+  margin: 0 0 20px 0;
+}
+
+/* Spinner */
+.adesao-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top: 2.5px solid #FFFFFF;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Rodapé */
+.adesao-footer {
+  text-align: center;
+  padding: 20px 16px;
+  font-size: 12px;
+  color: var(--ad-text-muted);
+}
+
+/* ==========================================================================
+   BREAKPOINTS: TABLET E DESKTOP (PROGRESSIVE ENHANCEMENT)
+   ========================================================================== */
+
+@media (min-width: 768px) {
+  .adesao-container {
+    padding: 28px 24px 48px;
+  }
+
+  .adesao-title {
+    font-size: 28px;
+  }
+
+  .adesao-subtitle {
+    font-size: 17px;
+  }
+
+  .service-cards-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
+  .adesao-modal-overlay {
+    align-items: center;
+    padding: 20px;
+  }
+
+  .adesao-modal-card {
+    max-width: 640px;
+    border-radius: 20px;
+    padding: 24px 28px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .adesao-header {
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: left;
+    margin-bottom: 24px;
+  }
+
+  .adesao-logo-wrap {
+    margin-bottom: 0;
+  }
+
+  .adesao-meta-grid {
+    margin: 0;
+    max-width: 480px;
+  }
+
+  .adesao-steps-mobile {
+    display: none;
+  }
+
+  .adesao-steps-desktop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    padding: 6px 12px;
+  }
+
+  .step-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ad-text-muted);
+    z-index: 2;
+  }
+
+  .step-item.active {
+    color: var(--ad-primary);
+  }
+
+  .step-item.completed {
+    color: var(--ad-green-text);
+  }
+
+  .step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #E2E8F0;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .step-item.active .step-num {
+    background: var(--ad-primary);
+    color: #FFFFFF;
+    box-shadow: 0 0 0 3px var(--ad-primary-glow);
+  }
+
+  .step-item.completed .step-num {
+    background: var(--ad-green);
+    color: #FFFFFF;
+  }
+
+  .adesao-layout {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 28px;
+  }
+
+  .adesao-main {
+    flex: 1.5;
+  }
+
+  .adesao-sidebar {
+    display: block;
+    flex: 1;
+    position: sticky;
+    top: 24px;
+  }
+
+  .sidebar-summary-card {
+    background: #FFFFFF;
+    border: 1px solid var(--ad-border);
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+  }
+}

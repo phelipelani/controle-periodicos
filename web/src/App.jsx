@@ -15,11 +15,13 @@ import Avcb from './pages/Avcb';
 import Agendamentos from './pages/Agendamentos';
 import Usuarios from './pages/Usuarios';
 import ConfigServicos from './pages/ConfigServicos';
+import AdesaoDedetizacao from './pages/AdesaoDedetizacao';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/adesao/:token" element={<AdesaoDedetizacao />} />
       <Route
         element={
           <ProtectedRoute>

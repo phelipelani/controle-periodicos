@@ -352,7 +352,6 @@ function migrate() {
     );
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_spda_registros_condominio ON spda_registros(condominio_id);
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_avcb_registros_condominio ON avcb_registros(condominio_id);
   `);
 
   const colunasAuditoria = [
@@ -365,6 +364,52 @@ function migrate() {
       db.exec(sql);
     } catch (e) {}
   }
+
+  // Colunas para adesão e notificações em agendamentos
+  const colunasAgendamentos = [
+    'ALTER TABLE agendamentos ADD COLUMN token_adesao TEXT',
+    'ALTER TABLE agendamentos ADD COLUMN valor_area_comum REAL',
+    'ALTER TABLE agendamentos ADD COLUMN tipos_unidades TEXT',
+    'ALTER TABLE agendamentos ADD COLUMN orientacoes TEXT',
+    'ALTER TABLE agendamentos ADD COLUMN notificacao_enviada INTEGER DEFAULT 0'
+  ];
+  for (const sql of colunasAgendamentos) {
+    try {
+      db.exec(sql);
+    } catch (e) {}
+  }
+
+  // Tabela de Adesões de Unidades à Dedetização
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS agendamento_adesoes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agendamento_id INTEGER NOT NULL REFERENCES agendamentos(id) ON DELETE CASCADE,
+      unidade TEXT NOT NULL,
+      bloco TEXT,
+      nome_morador TEXT NOT NULL,
+      telefone TEXT,
+      email TEXT,
+      tipo_unidade TEXT,
+      valor REAL,
+      metodo TEXT,
+      observacoes TEXT,
+      confirmado_em TEXT NOT NULL DEFAULT (datetime('now')),
+      executado INTEGER DEFAULT 0
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_agendamento_adesoes_unidade ON agendamento_adesoes(agendamento_id, unidade, COALESCE(bloco, ''));
+    CREATE INDEX IF NOT EXISTS idx_agendamentos_token ON agendamentos(token_adesao);
+  `);
+
+  // Gerar token para agendamentos existentes que ainda não possuem
+  try {
+    const crypto = require('crypto');
+    const semToken = db.prepare("SELECT id FROM agendamentos WHERE token_adesao IS NULL OR token_adesao = ''").all();
+    const setTokenStmt = db.prepare("UPDATE agendamentos SET token_adesao = ? WHERE id = ?");
+    for (const item of semToken) {
+      setTokenStmt.run(crypto.randomBytes(8).toString('hex'), item.id);
+    }
+  } catch (e) {}
 }
 
 const SERVICOS_PADRAO = [

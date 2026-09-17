@@ -10,7 +10,7 @@ const cron = require('node-cron');
 
 require('./db'); // inicializa o banco (migrate + seed)
 const { login, autenticar } = require('./auth');
-const { promoteAgendamentos } = require('./jobs');
+const { promoteAgendamentos, verificarNotificacoesDedetizacao } = require('./jobs');
 
 const usuariosRoutes = require('./routes/usuarios');
 const { router: condominiosRoutes } = require('./routes/condominios');
@@ -71,8 +71,13 @@ app.get('/api/auth/me', autenticar, (req, res) => {
 // --- Rotas públicas de imagem e preview de upload ---
 app.use('/api/upload', uploadRoutes);
 
-// --- Rotas protegidas ---
-app.use('/api', autenticar);
+// --- Rotas protegidas (com exceção para adesão pública de dedetização) ---
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/agendamentos/adesao/')) {
+    return next();
+  }
+  return autenticar(req, res, next);
+});
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/condominios', condominiosRoutes);
 app.use('/api/servicos', servicosRoutes);
@@ -101,9 +106,13 @@ app.use((err, req, res, next) => {
   res.status(500).json({ erro: 'Erro interno do servidor' });
 });
 
-// Promove agendamentos no boot e todo dia às 00:05.
+// Promove agendamentos e verifica notificações de dedetização no boot e todo dia às 00:05.
 promoteAgendamentos();
-cron.schedule('5 0 * * *', () => promoteAgendamentos());
+verificarNotificacoesDedetizacao();
+cron.schedule('5 0 * * *', () => {
+  promoteAgendamentos();
+  verificarNotificacoesDedetizacao();
+});
 
 // Mostra os IPs da rede para acesso a partir de outras máquinas.
 function ipsDaRede() {

@@ -34,11 +34,21 @@ export default function CondominiosFilters({ filtros, setFiltros, gerentes }) {
             ))}
           </select>
         </div>
-        {(filtros.busca || filtros.status !== 'Todos' || filtros.gerente !== 'Todos') && (
+        <div className="cond-filter-group">
+          <select className="cond-filter-input" value={filtros.ordenacao || 'codigo_asc'} onChange={set('ordenacao')}>
+            <option value="codigo_asc">Ordenar: Código (01 → 99)</option>
+            <option value="codigo_desc">Ordenar: Código (99 → 01)</option>
+            <option value="nome_asc">Ordenar: Nome (A → Z)</option>
+            <option value="nome_desc">Ordenar: Nome (Z → A)</option>
+            <option value="pendencias">Ordenar: Mais pendências</option>
+            <option value="em_dia">Ordenar: Em dia primeiro</option>
+          </select>
+        </div>
+        {(filtros.busca || filtros.status !== 'Todos' || filtros.gerente !== 'Todos' || filtros.ordenacao !== 'codigo_asc') && (
           <button 
             type="button" 
             className="cond-btn-clear" 
-            onClick={() => setFiltros({ busca: '', status: 'Todos', gerente: 'Todos' })}
+            onClick={() => setFiltros({ busca: '', status: 'Todos', gerente: 'Todos', ordenacao: 'codigo_asc' })}
             title="Limpar todos os filtros"
           >
             Limpar filtros
@@ -62,7 +72,7 @@ export default function CondominiosFilters({ filtros, setFiltros, gerentes }) {
         {mobileOpen && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', zIndex: 999 }}>
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#ffffff', padding: '24px', borderTopLeftRadius: '20px', borderTopRightRadius: '20px', boxShadow: '0 -4px 20px rgba(0,0,0,0.15)' }}>
-              <h3 style={{ marginTop: 0, color: '#0f172a' }}>Filtros</h3>
+              <h3 style={{ marginTop: 0, color: '#0f172a' }}>Filtros & Ordenação</h3>
               
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', color: '#64748b', fontSize: '12px', marginBottom: '8px', fontWeight: 600 }}>Status</label>
@@ -74,7 +84,7 @@ export default function CondominiosFilters({ filtros, setFiltros, gerentes }) {
                 </select>
               </div>
 
-              <div style={{ marginBottom: '24px' }}>
+              <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', color: '#64748b', fontSize: '12px', marginBottom: '8px', fontWeight: 600 }}>Gerente</label>
                 <select className="cond-filter-input" value={filtros.gerente} onChange={set('gerente')}>
                   <option value="Todos">Todos</option>
@@ -84,8 +94,20 @@ export default function CondominiosFilters({ filtros, setFiltros, gerentes }) {
                 </select>
               </div>
 
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', color: '#64748b', fontSize: '12px', marginBottom: '8px', fontWeight: 600 }}>Ordenar por</label>
+                <select className="cond-filter-input" value={filtros.ordenacao || 'codigo_asc'} onChange={set('ordenacao')}>
+                  <option value="codigo_asc">Código (01 → 99)</option>
+                  <option value="codigo_desc">Código (99 → 01)</option>
+                  <option value="nome_asc">Nome (A → Z)</option>
+                  <option value="nome_desc">Nome (Z → A)</option>
+                  <option value="pendencias">Mais pendências primeiro</option>
+                  <option value="em_dia">Em dia primeiro</option>
+                </select>
+              </div>
+
               <button style={{ width: '100%', marginBottom: '12px' }} onClick={() => setMobileOpen(false)}>Aplicar</button>
-              <button className="secundario" style={{ width: '100%', border: 'none' }} onClick={() => { setFiltros({...filtros, status: 'Todos', gerente: 'Todos'}); setMobileOpen(false); }}>Limpar Filtros</button>
+              <button className="secundario" style={{ width: '100%', border: 'none' }} onClick={() => { setFiltros({ busca: '', status: 'Todos', gerente: 'Todos', ordenacao: 'codigo_asc' }); setMobileOpen(false); }}>Limpar Filtros</button>
             </div>
           </div>
         )}

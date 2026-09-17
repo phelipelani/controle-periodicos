@@ -107,8 +107,8 @@ body.dark-theme {
   --bg-sidebar: #0B1220;
   --bg-surface: #111A2A;
   --bg-surface-elevated: #151F32;
-  --bg-input: #101A2B;
-  --bg-input-focus: #142035;
+  --bg-input: #0F172A;
+  --bg-input-focus: #162238;
   --border: #26344A;
   --border-subtle: #1C283B;
   --border-focus: #8B5CF6;
@@ -402,6 +402,19 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--border-focus);
   background: var(--bg-input-focus);
   box-shadow: 0 0 0 3px var(--primary-glow);
+}
+select option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+[data-theme="dark"] select option,
+body.dark-theme select option {
+  background-color: #111A2A;
+  color: #F1F5F9;
+}
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
 }
 label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
 .campo { margin-bottom: 14px; }

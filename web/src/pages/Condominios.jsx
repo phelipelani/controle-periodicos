@@ -30,7 +30,8 @@ export default function Condominios() {
   const initialFilters = {
     busca: '',
     status: 'Todos',
-    gerente: 'Todos'
+    gerente: 'Todos',
+    ordenacao: 'codigo_asc'
   };
   const [filtros, setFiltros] = useState(initialFilters);
 
@@ -48,8 +49,7 @@ export default function Condominios() {
   useEffect(carregar, []);
   useEffect(() => {
     api.get('/usuarios/gerentes')
-      .catch(() => api.get('/usuarios'))
-      .then((us) => setGerentes((us || []).filter((u) => u.papel === 'gerente' && (u.ativo === undefined || u.ativo === 1 || u.ativo === true))))
+      .then(setGerentes)
       .catch(() => {});
   }, []);
 
@@ -98,13 +98,46 @@ export default function Condominios() {
           const cod = String(c.id).padStart(3, '0');
           if (!c.nome.toLowerCase().includes(term) && !cod.includes(term) && !(c.endereco || '').toLowerCase().includes(term) && !(c.gerente_nome || '').toLowerCase().includes(term)) return false;
         }
-        if (filtros.status !== 'Todos' && c.statusGeral !== filtros.status) return false;
+        if (filtros.status !== 'Todos') {
+          if (filtros.status === 'vencido') {
+            if (!['vencido', 'sem_registro'].includes(c.statusGeral)) return false;
+          } else if (c.statusGeral !== filtros.status) {
+            return false;
+          }
+        }
         if (filtros.gerente !== 'Todos') {
           if (c.gerente_nome !== filtros.gerente) return false;
         }
         return true;
       })
-      .sort((a, b) => a.id - b.id);
+      .sort((a, b) => {
+        const idA = Number(a.codigo || a.id) || 0;
+        const idB = Number(b.codigo || b.id) || 0;
+
+        if (filtros.ordenacao === 'codigo_desc') {
+          return idB - idA;
+        }
+        if (filtros.ordenacao === 'nome_asc') {
+          return (a.nome || '').localeCompare(b.nome || '');
+        }
+        if (filtros.ordenacao === 'nome_desc') {
+          return (b.nome || '').localeCompare(a.nome || '');
+        }
+        if (filtros.ordenacao === 'pendencias') {
+          const peso = { 'vencido': 1, 'sem_registro': 1, 'a_vencer': 2, 'em_dia': 3 };
+          const diff = (peso[a.statusGeral] || 4) - (peso[b.statusGeral] || 4);
+          if (diff !== 0) return diff;
+          return idA - idB;
+        }
+        if (filtros.ordenacao === 'em_dia') {
+          const peso = { 'em_dia': 1, 'a_vencer': 2, 'vencido': 3, 'sem_registro': 4 };
+          const diff = (peso[a.statusGeral] || 4) - (peso[b.statusGeral] || 4);
+          if (diff !== 0) return diff;
+          return idA - idB;
+        }
+        // Padrão: codigo_asc
+        return idA - idB;
+      });
   }, [condominios, filtros]);
 
   const stats = useMemo(() => {

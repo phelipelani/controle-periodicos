@@ -6,6 +6,7 @@ export default function DedetizacaoTable({
   data,
   onEdit,
   onVisualizar,
+  onVerAdesoes = () => {},
   colunaOrdenacao = 'codigo',
   ordemDirecao = 'asc',
   onOrdenar = () => {}
@@ -62,8 +63,40 @@ export default function DedetizacaoTable({
                 <td><strong>{row.condominio}</strong></td>
                 <td>{row.empresa}</td>
                 <td>
-                  {row.dataAgendada}<br/>
-                  <span style={{color: '#64748b'}}>{row.periodoAgendado}</span>
+                  {row.dataAgendada !== '-' ? (
+                    <div>
+                      <div>{row.dataAgendada}</div>
+                      <div style={{color: '#64748b', fontSize: '11px'}}>{row.periodoAgendado}</div>
+                      {row.agendamento_id && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onVerAdesoes(row);
+                          }}
+                          style={{
+                            marginTop: '4px',
+                            background: row.total_adesoes > 0 ? '#dcfce7' : '#e0f2fe',
+                            color: row.total_adesoes > 0 ? '#15803d' : '#0369a1',
+                            border: `1px solid ${row.total_adesoes > 0 ? '#bbf7d0' : '#bae6fd'}`,
+                            borderRadius: '4px',
+                            padding: '2px 6px',
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                          title="Clique para gerenciar adesões das unidades e copiar o link do morador"
+                        >
+                          🏢 {row.total_adesoes || 0} {row.total_adesoes === 1 ? 'adesão' : 'adesões'}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    '—'
+                  )}
                 </td>
                 <td>{row.dataExecucao || '—'}</td>
                 <td>
@@ -126,7 +159,7 @@ export default function DedetizacaoTable({
                             borderRadius: '8px',
                             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                             zIndex: 20,
-                            minWidth: '180px',
+                            minWidth: '190px',
                             padding: '4px 0'
                           }}
                           onClick={(e) => e.stopPropagation()}
@@ -138,6 +171,15 @@ export default function DedetizacaoTable({
                           >
                             Visualizar detalhes
                           </button>
+                          {row.agendamento_id && (
+                            <button
+                              type="button"
+                              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 14px', border: 'none', background: 'none', fontSize: '13px', color: '#0284c7', fontWeight: 600, cursor: 'pointer' }}
+                              onClick={() => { setMenuAbertoId(null); onVerAdesoes(row); }}
+                            >
+                              📋 Ver Adesões / Link
+                            </button>
+                          )}
                           <button
                             type="button"
                             style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 14px', border: 'none', background: 'none', fontSize: '13px', color: '#2563eb', cursor: 'pointer' }}

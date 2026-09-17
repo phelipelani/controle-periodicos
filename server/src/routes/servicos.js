@@ -64,6 +64,8 @@ router.get('/:chave/detalhado', (req, res) => {
         c.id AS condominio_id, c.nome AS condominio_nome,
         cs.ultima_realizacao, cs.data_vencimento,
         ag.data_agendada, ag.periodo AS agendamento_periodo, ag.empresa AS agendamento_empresa, ag.id AS agendamento_id, ag.observacao AS agendamento_observacao,
+        ag.token_adesao, ag.valor_area_comum, ag.tipos_unidades, ag.orientacoes,
+        (SELECT COUNT(*) FROM agendamento_adesoes WHERE agendamento_id = ag.id) AS total_adesoes,
         h.empresa AS historico_empresa, h.anexo AS historico_anexo, h.observacao AS historico_observacao, h.id AS historico_id
       FROM condominios c
       LEFT JOIN condominio_servicos cs ON cs.condominio_id = c.id AND cs.servico_id = ?
@@ -111,6 +113,11 @@ router.get('/:chave/detalhado', (req, res) => {
       agendamento_empresa: r.agendamento_empresa || null,
       agendamento_periodo: r.agendamento_periodo || 'Manhã',
       agendamento_observacao: r.agendamento_observacao || '',
+      token_adesao: r.token_adesao || null,
+      valor_area_comum: r.valor_area_comum ?? 0,
+      tipos_unidades: r.tipos_unidades || null,
+      orientacoes: r.orientacoes || null,
+      total_adesoes: r.total_adesoes || 0,
       historico_id: r.historico_id
     };
   });

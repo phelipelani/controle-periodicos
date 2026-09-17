@@ -73,7 +73,185 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage, limits: { fileSize: 30 * 1024 * 1024 } });
 
-// Lista agendamentos com filtros e dados do condomínio
+const crypto = require('crypto');
+
+// ============================================================
+// ROTAS PÚBLICAS DE ADESÃO (Acesso por Moradores via Link)
+// ============================================================
+
+// 1. GET /api/agendamentos/adesao/:token - Consulta pública do agendamento
+router.get('/adesao/:token', (req, res) => {
+  const { token } = req.params;
+  if (!token) return res.status(400).json({ erro: 'Token inválido' });
+
+  const ag = db.prepare(`
+    SELECT 
+      a.id AS agendamento_id,
+      a.data_agendada,
+      a.periodo,
+      a.empresa,
+      a.status,
+      a.observacao,
+      a.valor_area_comum,
+      a.tipos_unidades,
+      a.orientacoes,
+      a.token_adesao,
+      c.id AS condominio_id,
+      c.nome AS condominio_nome,
+      printf('%03d', c.id) AS codigo_condominio,
+      c.endereco AS condominio_endereco,
+      c.bairro AS condominio_bairro,
+      c.cidade AS condominio_cidade,
+      c.uf AS condominio_uf,
+      s.nome AS servico_nome
+    FROM agendamentos a
+    JOIN condominios c ON c.id = a.condominio_id
+    JOIN servicos s ON s.id = a.servico_id
+    WHERE a.token_adesao = ?
+  `).get(token);
+
+  if (!ag) {
+    return res.status(404).json({ erro: 'Agendamento de dedetização não encontrado para este link.' });
+  }
+
+  // Verifica se o link expirou:
+  // O link expira no dia do agendamento ou se foi cancelado/realizado
+  const hoje = new Date().toISOString().split('T')[0];
+  const expirado = ag.status !== 'agendado' || ag.data_agendada <= hoje;
+
+  let tiposUnidades = [];
+  try {
+    tiposUnidades = JSON.parse(ag.tipos_unidades || '[]');
+  } catch (e) {
+    tiposUnidades = [];
+  }
+
+  // Se não houver tipos cadastrados, fornece um padrão amigável
+  if (!tiposUnidades || tiposUnidades.length === 0) {
+    tiposUnidades = [
+      { nome: 'Apartamento Padrão / Tipo', valor: 80 },
+      { nome: 'Cobertura / Duplex', valor: 130 },
+      { nome: 'Loja / Sala Comercial', valor: 160 }
+    ];
+  } else {
+    tiposUnidades = tiposUnidades.map(t => ({
+      nome: t.nome || t.tipo || 'Unidade',
+      valor: Number(t.valor) || 0
+    }));
+  }
+
+  const countAdesoes = db.prepare('SELECT COUNT(*) AS total FROM agendamento_adesoes WHERE agendamento_id = ?').get(ag.agendamento_id)?.total || 0;
+
+  res.json({
+    agendamento_id: ag.agendamento_id,
+    data_agendada: ag.data_agendada,
+    periodo: ag.periodo || 'Horário Comercial',
+    empresa: ag.empresa || 'Empresa Especializada Credenciada',
+    servico_nome: ag.servico_nome,
+    condominio_nome: ag.condominio_nome,
+    condominio: {
+      id: ag.condominio_id,
+      nome: ag.condominio_nome,
+      codigo: ag.codigo_condominio,
+      endereco: ag.condominio_endereco,
+      bairro: ag.condominio_bairro,
+      cidade: ag.condominio_cidade,
+      uf: ag.condominio_uf
+    },
+    valor_area_comum: ag.valor_area_comum,
+    tipos_unidades: tiposUnidades,
+    orientacoes: ag.orientacoes || 'A dedetização nas áreas comuns será realizada pela administradora. As unidades que optarem pela dedetização interna deverão manter animais domésticos, crianças e idosos fora do imóvel durante a aplicação e por no mínimo 4 horas após a pulverização.',
+    expirado,
+    total_adesoes: countAdesoes
+  });
+});
+
+// 2. POST /api/agendamentos/adesao/:token - Envio de confirmação do morador
+router.post('/adesao/:token', (req, res) => {
+  const { token } = req.params;
+  const ag = db.prepare('SELECT * FROM agendamentos WHERE token_adesao = ?').get(token);
+
+  if (!ag) {
+    return res.status(404).json({ erro: 'Agendamento não encontrado.' });
+  }
+
+  const hoje = new Date().toISOString().split('T')[0];
+  if (ag.status !== 'agendado' || ag.data_agendada <= hoje) {
+    return res.status(400).json({ erro: 'O prazo de adesão para esta data foi encerrado.' });
+  }
+
+  const { unidade, bloco, nome_morador, telefone, email, tipo_unidade, metodo, observacoes, valor } = req.body || {};
+
+  if (!unidade || !String(unidade).trim()) {
+    return res.status(400).json({ erro: 'Informe o número da sua unidade / apartamento.' });
+  }
+  if (!nome_morador || !String(nome_morador).trim()) {
+    return res.status(400).json({ erro: 'Informe o nome do morador / responsável.' });
+  }
+
+  const unidadeNorm = String(unidade).trim().toUpperCase();
+  const blocoNorm = bloco && String(bloco).trim() ? String(bloco).trim().toUpperCase() : null;
+  const nomeNorm = String(nome_morador).trim();
+  const telNorm = telefone && String(telefone).trim() ? String(telefone).trim() : null;
+  const emailNorm = email && String(email).trim() ? String(email).trim().toLowerCase() : null;
+
+  // Verificar se a unidade já confirmou (duplicidade)
+  const existente = db.prepare(`
+    SELECT id, nome_morador FROM agendamento_adesoes 
+    WHERE agendamento_id = ? AND UPPER(TRIM(unidade)) = ? AND (bloco IS ? OR UPPER(TRIM(bloco)) = ?)
+  `).get(ag.id, unidadeNorm, blocoNorm, blocoNorm);
+
+  if (existente) {
+    return res.status(409).json({
+      erro: `Esta unidade (${unidadeNorm}${blocoNorm ? ` - Bloco ${blocoNorm}` : ''}) já possui uma adesão registrada para este serviço.`
+    });
+  }
+
+  // Definir valor da adesão
+  let valorFinal = Number(valor);
+  if (isNaN(valorFinal) || valorFinal <= 0) {
+    let tiposLista = [];
+    try { tiposLista = JSON.parse(ag.tipos_unidades || '[]'); } catch (e) {}
+    if (Array.isArray(tiposLista) && tiposLista.length > 0) {
+      const achou = tiposLista.find((t) => t.tipo === tipo_unidade || t.nome === tipo_unidade);
+      if (achou) valorFinal = Number(achou.valor) || 0;
+      else valorFinal = Number(tiposLista[0].valor) || 80;
+    } else {
+      valorFinal = 80;
+    }
+  }
+
+  const info = db.prepare(`
+    INSERT INTO agendamento_adesoes (
+      agendamento_id, unidade, bloco, nome_morador, telefone, email, tipo_unidade, valor, metodo, observacoes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    ag.id,
+    unidadeNorm,
+    blocoNorm,
+    nomeNorm,
+    telNorm,
+    emailNorm,
+    tipo_unidade || 'Apartamento',
+    valorFinal,
+    metodo || 'Pulverização Líquida',
+    observacoes ? String(observacoes).trim().slice(0, 300) : null
+  );
+
+  const novaAdesao = db.prepare('SELECT * FROM agendamento_adesoes WHERE id = ?').get(info.lastInsertRowid);
+
+  res.status(201).json({
+    ok: true,
+    mensagem: 'Adesão confirmada com sucesso!',
+    adesao: novaAdesao
+  });
+});
+
+// ============================================================
+// ROTAS PROTEGIDAS / ADMINISTRATIVAS
+// ============================================================
+
+// Lista agendamentos com filtros, dados do condomínio e contadores de adesão
 router.get('/', (req, res) => {
   const { status, condominio } = req.query;
   const escopo = filtroEscopo(req.usuario, 'a.condominio_id');
@@ -90,7 +268,9 @@ router.get('/', (req, res) => {
       s.nome AS servico_nome, 
       s.chave AS servico_chave,
       COALESCE(a.anexo, h.anexo) AS recibo_anexo,
-      h.id AS historico_id
+      h.id AS historico_id,
+      (SELECT COUNT(*) FROM agendamento_adesoes WHERE agendamento_id = a.id) AS adesoes_count,
+      (SELECT COALESCE(SUM(valor), 0) FROM agendamento_adesoes WHERE agendamento_id = a.id) AS adesoes_total_valor
     FROM agendamentos a
     JOIN condominios c ON c.id = a.condominio_id
     JOIN servicos s ON s.id = a.servico_id
@@ -106,7 +286,18 @@ router.get('/', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  let { condominio_id, servico_id, data_agendada, periodo, empresa, observacao } = req.body || {};
+  let {
+    condominio_id,
+    servico_id,
+    data_agendada,
+    periodo,
+    empresa,
+    observacao,
+    valor_area_comum,
+    tipos_unidades,
+    orientacoes
+  } = req.body || {};
+
   if (!condominio_id || !data_agendada) {
     return res.status(400).json({ erro: 'Condomínio e data agendada são obrigatórios' });
   }
@@ -117,13 +308,32 @@ router.post('/', (req, res) => {
     const ded = db.prepare("SELECT id FROM servicos WHERE chave = 'dedetizacao'").get();
     servico_id = ded?.id;
   }
+
   const empresaNorm = empresa ? String(empresa).trim().toUpperCase() : null;
+  const tokenAdesao = crypto.randomBytes(8).toString('hex');
+  const tiposJson = tipos_unidades ? (typeof tipos_unidades === 'string' ? tipos_unidades : JSON.stringify(tipos_unidades)) : null;
+
   const info = db
     .prepare(`
-      INSERT INTO agendamentos (condominio_id, servico_id, data_agendada, periodo, empresa, observacao, criado_por)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO agendamentos (
+        condominio_id, servico_id, data_agendada, periodo, empresa, observacao,
+        valor_area_comum, tipos_unidades, orientacoes, token_adesao, criado_por
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
-    .run(condominio_id, servico_id, data_agendada, periodo || null, empresaNorm, observacao || null, req.usuario.id);
+    .run(
+      condominio_id,
+      servico_id,
+      data_agendada,
+      periodo || null,
+      empresaNorm,
+      observacao || null,
+      valor_area_comum ? Number(valor_area_comum) : null,
+      tiposJson,
+      orientacoes || null,
+      tokenAdesao,
+      req.usuario.id
+    );
 
   res.status(201).json(db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(info.lastInsertRowid));
 });
@@ -221,7 +431,79 @@ router.post('/:id/recibo', upload.single('documento'), (req, res) => {
   });
 });
 
-// Editar (data/empresa/observação) ou cancelar um agendamento ainda 'agendado'.
+// Obter lista detalhada de adesões de um agendamento
+router.get('/:id/adesoes', (req, res) => {
+  const id = Number(req.params.id);
+  const ag = db.prepare(`
+    SELECT a.*, c.nome AS condominio_nome, printf('%03d', c.id) AS codigo_condominio, c.endereco AS condominio_endereco
+    FROM agendamentos a 
+    JOIN condominios c ON c.id = a.condominio_id 
+    WHERE a.id = ?
+  `).get(id);
+
+  if (!ag) return res.status(404).json({ erro: 'Agendamento não encontrado' });
+  if (!podeAcessarCondominio(req.usuario, ag.condominio_id)) {
+    return res.status(403).json({ erro: 'Você não tem acesso a este condomínio' });
+  }
+
+  const adesoes = db.prepare(`
+    SELECT * FROM agendamento_adesoes 
+    WHERE agendamento_id = ?
+    ORDER BY CAST(unidade AS INTEGER) ASC, unidade ASC
+  `).all(id);
+
+  const totalUnidades = adesoes.length;
+  const valorTotalUnidades = adesoes.reduce((acc, cur) => acc + (Number(cur.valor) || 0), 0);
+  const valorAreaComum = Number(ag.valor_area_comum) || 0;
+
+  res.json({
+    agendamento: ag,
+    adesoes,
+    metricas: {
+      total_unidades: totalUnidades,
+      valor_total_unidades: valorTotalUnidades,
+      valor_area_comum: valorAreaComum,
+      total_geral: valorTotalUnidades + valorAreaComum
+    }
+  });
+});
+
+// Remover adesão de uma unidade
+router.delete('/:id/adesoes/:adesaoId', (req, res) => {
+  const id = Number(req.params.id);
+  const adesaoId = Number(req.params.adesaoId);
+  const ag = db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(id);
+
+  if (!ag) return res.status(404).json({ erro: 'Agendamento não encontrado' });
+  if (!podeAcessarCondominio(req.usuario, ag.condominio_id)) {
+    return res.status(403).json({ erro: 'Você não tem acesso a este condomínio' });
+  }
+
+  db.prepare('DELETE FROM agendamento_adesoes WHERE id = ? AND agendamento_id = ?').run(adesaoId, id);
+  res.json({ ok: true, mensagem: 'Adesão removida com sucesso' });
+});
+
+// Alternar status de execução de uma adesão no dia
+router.patch('/:id/adesoes/:adesaoId/executado', (req, res) => {
+  const id = Number(req.params.id);
+  const adesaoId = Number(req.params.adesaoId);
+  const ag = db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(id);
+
+  if (!ag) return res.status(404).json({ erro: 'Agendamento não encontrado' });
+  if (!podeAcessarCondominio(req.usuario, ag.condominio_id)) {
+    return res.status(403).json({ erro: 'Você não tem acesso a este condomínio' });
+  }
+
+  const atual = db.prepare('SELECT executado FROM agendamento_adesoes WHERE id = ? AND agendamento_id = ?').get(adesaoId, id);
+  if (!atual) return res.status(404).json({ erro: 'Adesão não encontrada' });
+
+  const novoStatus = atual.executado ? 0 : 1;
+  db.prepare('UPDATE agendamento_adesoes SET executado = ? WHERE id = ?').run(novoStatus, adesaoId);
+
+  res.json({ ok: true, executado: novoStatus });
+});
+
+// Editar (data/empresa/observação/preços) ou cancelar um agendamento ainda 'agendado'.
 router.put('/:id', (req, res) => {
   const id = Number(req.params.id);
   const ag = db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(id);
@@ -232,16 +514,42 @@ router.put('/:id', (req, res) => {
   if (ag.status !== 'agendado') {
     return res.status(400).json({ erro: 'Só é possível alterar agendamentos pendentes' });
   }
-  const { data_agendada, periodo, empresa, observacao, status } = req.body || {};
+  const {
+    data_agendada,
+    periodo,
+    empresa,
+    observacao,
+    valor_area_comum,
+    tipos_unidades,
+    orientacoes,
+    status
+  } = req.body || {};
+
   if (status === 'cancelado') {
     db.prepare("UPDATE agendamentos SET status = 'cancelado' WHERE id = ?").run(id);
   } else {
     const empresaNorm = empresa === undefined ? ag.empresa : (empresa ? String(empresa).trim().toUpperCase() : null);
-    db.prepare('UPDATE agendamentos SET data_agendada = ?, periodo = ?, empresa = ?, observacao = ? WHERE id = ?').run(
+    const tiposJson = tipos_unidades !== undefined ? (typeof tipos_unidades === 'string' ? tipos_unidades : JSON.stringify(tipos_unidades)) : ag.tipos_unidades;
+    const valorComum = valor_area_comum !== undefined ? (valor_area_comum ? Number(valor_area_comum) : null) : ag.valor_area_comum;
+
+    db.prepare(`
+      UPDATE agendamentos 
+      SET data_agendada = ?, 
+          periodo = ?, 
+          empresa = ?, 
+          observacao = ?,
+          valor_area_comum = ?,
+          tipos_unidades = ?,
+          orientacoes = ?
+      WHERE id = ?
+    `).run(
       data_agendada ?? ag.data_agendada,
       periodo === undefined ? ag.periodo : (periodo || null),
       empresaNorm,
       observacao === undefined ? ag.observacao : observacao,
+      valorComum,
+      tiposJson,
+      orientacoes === undefined ? ag.orientacoes : orientacoes,
       id
     );
   }

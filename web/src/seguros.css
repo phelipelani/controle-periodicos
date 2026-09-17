@@ -99,15 +99,16 @@
   align-items: center;
   gap: 16px;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
   position: relative;
   color: var(--text-primary);
+
 }
 
 .seg-kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .seg-kpi-card.active {
@@ -116,8 +117,8 @@
 }
 
 .seg-kpi-icon {
-  width: 46px;
-  height: 46px;
+  width: 100%;
+  height: 100%;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -126,10 +127,22 @@
   flex-shrink: 0;
 }
 
-.seg-kpi-icon.blue { background: var(--primary-soft); color: var(--primary); }
-.seg-kpi-icon.green { background: var(--success-soft); color: var(--success); }
-.seg-kpi-icon.orange { background: var(--warning-soft); color: var(--warning); }
-.seg-kpi-icon.red { background: var(--danger-soft); color: var(--danger); }
+.seg-kpi-icon.blue {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.seg-kpi-icon.green {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.seg-kpi-icon.orange {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.seg-kpi-icon.red {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
 
 .seg-kpi-content {
   display: flex;
@@ -137,7 +150,7 @@
 }
 
 .seg-kpi-title {
-  font-size: 13px;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-muted);
   margin-bottom: 2px;
@@ -166,7 +179,7 @@
   flex-wrap: wrap;
   gap: 14px;
   align-items: flex-end;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .seg-filter-group {
@@ -176,20 +189,24 @@
 }
 
 .seg-filter-group label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 800;
   color: var(--text-secondary);
 }
 
 .seg-input {
   background: var(--bg-input);
   border: 1px solid var(--border);
-  color: var(--text-primary);
+  color: #26344A;
   padding: 9px 12px;
+  font-weight: 700;
   border-radius: 8px;
   outline: none;
-  font-size: 13px;
-  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+  font-size: 16px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
   box-sizing: border-box;
 }
 
@@ -197,6 +214,7 @@
   border-color: var(--border-focus);
   background: var(--bg-input-focus);
   box-shadow: 0 0 0 3px var(--primary-glow);
+  color: var(--text-muted);
 }
 
 .seg-btn-clear {
@@ -225,7 +243,7 @@
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -521,10 +539,18 @@
   flex-shrink: 0;
 }
 
-.seg-legend-dot.green { background: var(--success); }
-.seg-legend-dot.orange { background: var(--warning); }
-.seg-legend-dot.red { background: var(--danger); }
-.seg-legend-dot.slate { background: var(--neutral-badge-text); }
+.seg-legend-dot.green {
+  background: var(--success);
+}
+.seg-legend-dot.orange {
+  background: var(--warning);
+}
+.seg-legend-dot.red {
+  background: var(--danger);
+}
+.seg-legend-dot.slate {
+  background: var(--neutral-badge-text);
+}
 
 /* Large Dossier Drawer (Ficha do Seguro / Edição) */
 .seg-drawer {
@@ -988,6 +1014,7 @@
 }
 
 @keyframes segSpin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
-

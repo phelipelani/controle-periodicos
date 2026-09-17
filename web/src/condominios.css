@@ -224,6 +224,7 @@ body.dark-theme {
   gap: 12px;
   flex: 1;
   min-width: 220px;
+
 }
 
 .cond-filter-input {
@@ -280,6 +281,7 @@ body.dark-theme {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
+  
 }
 
 @media (max-width: 1400px) {
@@ -300,180 +302,182 @@ body.dark-theme {
   }
 }
 
-/* Card de Condomínio */
+/* Card de Condomínio - Layout Redesenhado */
 .cond-card {
   background: var(--cond-card-bg);
   border: 1px solid var(--cond-border);
-  border-radius: 14px;
-  padding: 20px;
+  border-radius: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   position: relative;
   box-shadow: var(--cond-card-shadow);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
+  
+  
 }
 
 .cond-card:hover {
   background: var(--cond-card-hover-bg);
   border-color: var(--cond-border-hover);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: var(--cond-card-hover-shadow);
 }
 
-.cond-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+/* Botão Flutuante de Opções */
+.cond-card-top-actions {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 10;
 }
 
-.cond-card-title {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  min-width: 0;
-  flex: 1;
-}
-
-.cond-card-img {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: var(--cond-input-bg);
-  object-fit: cover;
-  border: 1px solid var(--cond-border);
-  flex-shrink: 0;
-}
-
-.cond-card-img-placeholder {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: var(--cond-input-bg);
+.cond-btn-icon-float {
+  background: rgba(30, 41, 59, 0.75);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #E2E8F0;
+  cursor: pointer;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--cond-text-muted);
-  font-size: 22px;
-  border: 1px solid var(--cond-border);
-  flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
-.cond-card-info {
-  min-width: 0;
+.cond-btn-icon-float:hover {
+  background: #3B82F6;
+  border-color: #3B82F6;
+  color: #FFFFFF;
+  transform: scale(1.1) rotate(45deg);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.45);
+}
+
+.cond-btn-icon-float svg {
+  stroke: currentColor;
+  stroke-width: 2;
+  display: block;
+}
+
+/* 1. Imagem Banner Superior */
+.cond-card-banner {
+  width: 50%;
+  height: 30%;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  background: #0B1220;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+      margin: 0 auto;
+}
+
+.cond-card-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cond-card-banner-placeholder {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+.cond-banner-overlay-icon {
+  position: absolute;
+  font-size: 38px;
+  opacity: 0.85;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+}
+
+/* 2. Corpo Centralizado */
+.cond-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   flex: 1;
 }
 
-.cond-card-code {
-  font-size: 11px;
-  color: var(--cond-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-weight: 600;
-  margin-bottom: 2px;
-}
-
-.cond-card-name {
-  margin: 0 0 6px 0;
+.cond-card-name-centered {
+  margin: 0;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--cond-text-main);
-  line-height: 1.3;
+  text-align: center;
+  line-height: 1.35;
   word-break: break-word;
   transition: color 0.2s ease;
 }
 
-.cond-card:hover .cond-card-name {
-  color: #3B82F6;
+.cond-card:hover .cond-card-name-centered {
+  color: var(--primary);
 }
 
-.cond-card-address {
-  margin: 0 0 6px 0;
-  font-size: 12px;
+.cond-card-address-centered {
+  margin: 0;
+  font-size: 13px;
   color: var(--cond-text-sub);
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  line-height: 1.3;
+  text-align: center;
+  line-height: 1.35;
   word-break: break-word;
 }
 
-.cond-loc-ico {
-  color: #EF476F;
-  font-size: 13px;
-  flex-shrink: 0;
-}
-
-.cond-card-gerente {
-  margin: 0;
-  font-size: 12px;
-  color: var(--cond-text-sub);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.cond-mgr-ico {
-  color: var(--cond-text-muted);
-  font-size: 12px;
-}
-
-.cond-badge-gerente {
-  background: var(--cond-badge-bg);
-  color: var(--cond-badge-text);
-  border: 1px solid var(--cond-badge-border);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.cond-card-actions {
+.cond-card-meta-centered {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.cond-btn-icon {
-  background: transparent;
-  border: none;
-  color: var(--cond-text-muted);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
-  display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  transition: color 0.2s ease, background-color 0.2s ease;
+  gap: 3px;
+  margin-top: 2px;
 }
 
-.cond-btn-icon:hover {
-  background: var(--cond-badge-bg);
+.cond-meta-gerente {
+  font-size: 13px;
   color: var(--cond-text-main);
+  font-weight: 600;
 }
 
-/* Status Badges */
-.cond-card-status {
-  padding: 4px 10px;
+.cond-meta-unidades {
+  font-size: 13px;
+  color: var(--cond-text-muted);
+  font-weight: 500;
+}
+
+/* 3. Linha de Status (Badge à Direita) */
+.cond-card-status-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+
+.cond-card-status-pill {
+  padding: 3px 10px;
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
 }
 
+/* Status Badges */
 .cond-status-em_dia {
-  background: #123222;
-  border: 1px solid #1E5336;
-  color: #86EFAC;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #4ADE80;
 }
 
 .cond-status-em_dia svg {
@@ -481,8 +485,8 @@ body.dark-theme {
 }
 
 .cond-status-a_vencer {
-  background: #3A2A10;
-  border: 1px solid #5A4219;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
   color: #FCD34D;
 }
 
@@ -492,25 +496,25 @@ body.dark-theme {
 
 .cond-status-vencido,
 .cond-status-sem_registro {
-  background: #431923;
-  border: 1px solid #652535;
-  color: #FDA4AF;
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #FCA5A5;
 }
 
 .cond-status-vencido svg,
 .cond-status-sem_registro svg {
-  color: #EF233C;
+  color: #EF4444;
 }
 
-/* Painel de Serviços dentro do Card */
+/* 4. Painel de Serviços dentro do Card */
 .cond-services-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
-  padding: 10px 8px;
+  gap: 4px;
+  padding: 12px 6px;
   background: var(--cond-inner-grid-bg);
   border: 1px solid var(--cond-inner-grid-border);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .cond-service-item {
@@ -520,7 +524,7 @@ body.dark-theme {
   gap: 4px;
   position: relative;
   cursor: help;
-  padding: 6px 2px;
+  padding: 4px 1px;
   border-radius: 6px;
   transition: background-color 0.2s ease;
 }
@@ -545,7 +549,7 @@ body.dark-theme {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  width: 100%;
+  max-width: 100%;
 }
 
 .cond-service-dot {

@@ -155,12 +155,25 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
   // Aba ativa: 'agendamento' | 'execucao'
   const [abaAtiva, setAbaAtiva] = useState('agendamento');
 
+  const DEFAULT_TIPOS = [
+    { nome: 'Apartamento Padrão', valor: 80 },
+    { nome: 'Cobertura / Duplex', valor: 130 },
+    { nome: 'Loja / Comercial', valor: 160 }
+  ];
+  const DEFAULT_ORIENTACOES = `MÉTODOS DE APLICAÇÃO E CUIDADOS:
+• PULVERIZAÇÃO (Garantia 6 meses): Ausência do local durante a aplicação e manter fechado por 2h. Alérgicos, respiratórios, crianças, lactentes e pets: ausência de no mínimo 48h. Limpeza após 96h. Arejar antes de usar. Cobrir utensílios expostos.
+• SEM ODOR (Garantia 3 meses): Gel inodoro e ralos. Não necessita desocupar nem cuidados com louças.
+• COBRANÇA: A taxa será cobrada junto à taxa condominial do mês seguinte à dedetização.`;
+
   // Estados Agendamento
   const [condominioId, setCondominioId] = useState('');
   const [empresaAgendada, setEmpresaAgendada] = useState('');
   const [dataAgendada, setDataAgendada] = useState('');
   const [periodoAgendado, setPeriodoAgendado] = useState('Manhã');
   const [obsAgendamento, setObsAgendamento] = useState('');
+  const [valorAreaComum, setValorAreaComum] = useState('');
+  const [tiposUnidades, setTiposUnidades] = useState(DEFAULT_TIPOS);
+  const [orientacoes, setOrientacoes] = useState(DEFAULT_ORIENTACOES);
 
   // Estados Execução
   const [empresaExecucao, setEmpresaExecucao] = useState('');
@@ -179,6 +192,9 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
         setDataAgendada('');
         setPeriodoAgendado('Manhã');
         setObsAgendamento('');
+        setValorAreaComum('');
+        setTiposUnidades(DEFAULT_TIPOS);
+        setOrientacoes(DEFAULT_ORIENTACOES);
         setAbaAtiva('agendamento');
       } else {
         // Inicialização para condomínio existente
@@ -197,6 +213,20 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
         setPeriodoAgendado(rowData?.agendamento_periodo || rowData?.periodoAgendado || 'Manhã');
         setEmpresaAgendada(rowData?.agendamento_empresa || (rowData?.empresa && rowData.empresa !== '-' ? rowData.empresa : ''));
         setObsAgendamento(rowData?.agendamento_observacao || '');
+        setValorAreaComum(rowData?.valor_area_comum !== undefined && rowData?.valor_area_comum !== null ? rowData.valor_area_comum : '');
+        
+        if (rowData?.tipos_unidades) {
+          try {
+            const parsed = typeof rowData.tipos_unidades === 'string' ? JSON.parse(rowData.tipos_unidades) : rowData.tipos_unidades;
+            setTiposUnidades(Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_TIPOS);
+          } catch {
+            setTiposUnidades(DEFAULT_TIPOS);
+          }
+        } else {
+          setTiposUnidades(DEFAULT_TIPOS);
+        }
+
+        setOrientacoes(rowData?.orientacoes || DEFAULT_ORIENTACOES);
 
         // Dados de Execução
         const hoje = new Date().toISOString().split('T')[0];
@@ -207,6 +237,26 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
       }
     }
   }, [open, mode, initialTab, rowData]);
+
+  const handleTipoChange = (index, campo, valor) => {
+    setTiposUnidades(prev => {
+      const novo = [...prev];
+      novo[index] = { ...novo[index], [campo]: campo === 'valor' ? Number(valor) || 0 : valor };
+      return novo;
+    });
+  };
+
+  const handleAdicionarTipo = () => {
+    if (tiposUnidades.length < 3) {
+      setTiposUnidades(prev => [...prev, { nome: `Categoria ${prev.length + 1}`, valor: 100 }]);
+    }
+  };
+
+  const handleRemoverTipo = (index) => {
+    if (tiposUnidades.length > 1) {
+      setTiposUnidades(prev => prev.filter((_, i) => i !== index));
+    }
+  };
 
   // Salvar / Editar Agendamento
   const handleSalvarAgendamento = async () => {
@@ -223,23 +273,25 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
     setSalvando(true);
     setErro('');
     try {
+      const payload = {
+        data_agendada: dataAgendada,
+        periodo: periodoAgendado,
+        empresa: empresaAgendada ? empresaAgendada.trim().toUpperCase() : null,
+        observacao: obsAgendamento || null,
+        valor_area_comum: valorAreaComum !== '' ? Number(valorAreaComum) : 0,
+        tipos_unidades: JSON.stringify(tiposUnidades.filter(t => t.nome && t.nome.trim())),
+        orientacoes: orientacoes || null
+      };
+
       if (rowData?.agendamento_id) {
         // Atualiza agendamento existente
-        await api.put(`/agendamentos/${rowData.agendamento_id}`, {
-          data_agendada: dataAgendada,
-          periodo: periodoAgendado,
-          empresa: empresaAgendada ? empresaAgendada.trim().toUpperCase() : null,
-          observacao: obsAgendamento || null
-        });
+        await api.put(`/agendamentos/${rowData.agendamento_id}`, payload);
       } else {
         // Cria novo agendamento
         await api.post('/agendamentos', {
           condominio_id: targetCondominioId,
           servico_id: servicoId,
-          data_agendada: dataAgendada,
-          periodo: periodoAgendado,
-          empresa: empresaAgendada ? empresaAgendada.trim().toUpperCase() : null,
-          observacao: obsAgendamento || null
+          ...payload
         });
       }
       onSaved();
@@ -372,6 +424,86 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
                 placeholder="Instruções de portaria, unidades solicitantes, horários preferenciais..."
               />
             </div>
+
+            {/* Configuração de Preços e Adesão de Unidades */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px', marginTop: '10px' }}>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>🏢</span> Tabela de Preços e Adesão (Link dos Moradores)
+              </div>
+
+              <div className="ded-form-group" style={{ marginBottom: '12px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '600' }}>Valor Área Comum (R$ - Custo do Condomínio)</label>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  className="ded-input" 
+                  value={valorAreaComum} 
+                  onChange={e => setValorAreaComum(e.target.value)} 
+                  placeholder="Ex: 500.00" 
+                />
+              </div>
+
+              <div className="ded-form-group" style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600' }}>Categorias de Unidades e Valores (Até 3)</label>
+                  {tiposUnidades.length < 3 && (
+                    <button 
+                      type="button" 
+                      onClick={handleAdicionarTipo}
+                      style={{ background: '#0284c7', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}
+                    >
+                      + Adicionar Categoria
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {tiposUnidades.map((t, idx) => (
+                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '8px', alignItems: 'center' }}>
+                      <input 
+                        type="text" 
+                        className="ded-input" 
+                        value={t.nome} 
+                        onChange={e => handleTipoChange(idx, 'nome', e.target.value)} 
+                        placeholder={`Categoria ${idx + 1}`} 
+                        style={{ fontSize: '12px', padding: '6px 10px' }}
+                      />
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        className="ded-input" 
+                        value={t.valor} 
+                        onChange={e => handleTipoChange(idx, 'valor', e.target.value)} 
+                        placeholder="R$" 
+                        style={{ fontSize: '12px', padding: '6px 10px' }}
+                      />
+                      {tiposUnidades.length > 1 && (
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoverTipo(idx)}
+                          style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '4px', padding: '6px 8px', fontSize: '12px', cursor: 'pointer' }}
+                          title="Remover categoria"
+                        >
+                          &times;
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ded-form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '12px', fontWeight: '600' }}>Orientações e Cuidados aos Moradores</label>
+                <textarea 
+                  className="ded-textarea" 
+                  rows={3} 
+                  value={orientacoes} 
+                  onChange={e => setOrientacoes(e.target.value)} 
+                  placeholder="Orientações sobre pets, tempo de espera..."
+                  style={{ fontSize: '12px' }}
+                />
+              </div>
+            </div>
           </div>
         ) : (
           /* Modo de Edição por Condomínio com Subpastas/Abas */
@@ -400,11 +532,50 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
             {abaAtiva === 'agendamento' && (
               <div className="ded-form-section">
                 {rowData?.agendamento_id ? (
-                  <div style={{background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:'8px', padding:'12px', fontSize:'13px', color:'#1e40af'}}>
-                    <strong>📅 Agendamento Ativo:</strong> Visita marcada para <strong>{rowData.dataAgendada}</strong> ({rowData.periodoAgendado || 'Manhã'}).
+                  <div>
+                    <div style={{background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:'8px', padding:'12px', fontSize:'13px', color:'#1e40af', marginBottom:'10px'}}>
+                      <strong>📅 Agendamento Ativo:</strong> Visita marcada para <strong>{rowData.dataAgendada}</strong> ({rowData.periodoAgendado || 'Manhã'}).
+                    </div>
+
+                    {rowData.token_adesao && (
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 14px', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <strong style={{ fontSize: '13px', color: '#166534', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>🔗</span> Link de Adesão dos Moradores
+                          </strong>
+                          <a 
+                            href={`${window.location.origin}/adesao/${rowData.token_adesao}`} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            style={{ fontSize: '12px', color: '#0284c7', fontWeight: 600, textDecoration: 'none' }}
+                          >
+                            Abrir Página do Morador ↗
+                          </a>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input 
+                            type="text" 
+                            readOnly 
+                            value={`${window.location.origin}/adesao/${rowData.token_adesao}`} 
+                            style={{ flex: 1, padding: '6px 8px', fontSize: '12px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#334155' }} 
+                            onClick={(e) => e.target.select()}
+                          />
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/adesao/${rowData.token_adesao}`);
+                              alert('✓ Link de adesão copiado para a área de transferência!');
+                            }}
+                            style={{ background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                          >
+                            Copiar Link
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div style={{background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:'8px', padding:'12px', fontSize:'13px', color:'#475569'}}>
+                  <div style={{background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:'8px', padding:'12px', fontSize:'13px', color:'#475569', marginBottom:'14px'}}>
                     ℹ️ <strong>Nenhum agendamento pendente.</strong> Preencha os campos abaixo para marcar uma nova data.
                   </div>
                 )}
@@ -449,6 +620,86 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
                     placeholder="Ex: Chave na portaria, entrar em contato com o zelador, unidades que solicitaram dedetização..."
                   />
                   <div style={{fontSize:'11px', color:'#64748b'}}>Você pode alterar a data, empresa ou observação a qualquer momento.</div>
+                </div>
+
+                {/* Configuração de Preços e Adesão de Unidades */}
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px', marginTop: '10px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🏢</span> Tabela de Preços e Adesão (Link dos Moradores)
+                  </div>
+
+                  <div className="ded-form-group" style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600' }}>Valor Área Comum (R$ - Custo do Condomínio)</label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      className="ded-input" 
+                      value={valorAreaComum} 
+                      onChange={e => setValorAreaComum(e.target.value)} 
+                      placeholder="Ex: 500.00" 
+                    />
+                  </div>
+
+                  <div className="ded-form-group" style={{ marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: '600' }}>Categorias de Unidades e Valores (Até 3)</label>
+                      {tiposUnidades.length < 3 && (
+                        <button 
+                          type="button" 
+                          onClick={handleAdicionarTipo}
+                          style={{ background: '#0284c7', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}
+                        >
+                          + Adicionar Categoria
+                        </button>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {tiposUnidades.map((t, idx) => (
+                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '8px', alignItems: 'center' }}>
+                          <input 
+                            type="text" 
+                            className="ded-input" 
+                            value={t.nome} 
+                            onChange={e => handleTipoChange(idx, 'nome', e.target.value)} 
+                            placeholder={`Categoria ${idx + 1}`} 
+                            style={{ fontSize: '12px', padding: '6px 10px' }}
+                          />
+                          <input 
+                            type="number" 
+                            step="0.01" 
+                            className="ded-input" 
+                            value={t.valor} 
+                            onChange={e => handleTipoChange(idx, 'valor', e.target.value)} 
+                            placeholder="R$" 
+                            style={{ fontSize: '12px', padding: '6px 10px' }}
+                          />
+                          {tiposUnidades.length > 1 && (
+                            <button 
+                              type="button" 
+                              onClick={() => handleRemoverTipo(idx)}
+                              style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '4px', padding: '6px 8px', fontSize: '12px', cursor: 'pointer' }}
+                              title="Remover categoria"
+                            >
+                              &times;
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="ded-form-group" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600' }}>Orientações e Cuidados aos Moradores</label>
+                    <textarea 
+                      className="ded-textarea" 
+                      rows={3} 
+                      value={orientacoes} 
+                      onChange={e => setOrientacoes(e.target.value)} 
+                      placeholder="Orientações sobre pets, tempo de espera..."
+                      style={{ fontSize: '12px' }}
+                    />
+                  </div>
                 </div>
 
                 {/* Confirmação de cancelamento */}

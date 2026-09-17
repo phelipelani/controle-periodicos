@@ -74,10 +74,16 @@
   outline: none;
   width: 100%;
   transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
 }
 .dash-filter-select:focus {
   border-color: var(--border-focus);
+  background: var(--bg-input-focus);
   box-shadow: 0 0 0 3px var(--primary-glow);
+}
+.dash-filter-select option {
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
 }
 .dash-btn-update {
   display: flex;

@@ -1,13 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IcoDots, IcoRelogio, IcoCheckCircle, IcoAlert, IcoAlertTriangle, IcoDedetizacao, IcoExtintor, IcoReservatorio, IcoSeguro, IcoAvcb, IcoSpda } from '../icons';
+import { IcoEngrenagem, IcoRelogio, IcoCheckCircle, IcoAlert, IcoAlertTriangle, IcoDedetizacao, IcoExtintor, IcoReservatorio, IcoSeguro, IcoAvcb, IcoSpda } from '../icons';
 
 const iconMap = {
   dedetizacao: IcoDedetizacao,
-  extintor: IcoExtintor,
   reservatorio: IcoReservatorio,
-  seguro: IcoSeguro,
+  extintor: IcoExtintor,
   avcb: IcoAvcb,
+  seguro: IcoSeguro,
   spda: IcoSpda
 };
 
@@ -19,7 +19,7 @@ export default function CondominioCard({ condominio, onEdit }) {
       case 'em_dia': return { label: 'Todos em dia', cls: 'em_dia', Ico: IcoCheckCircle };
       case 'a_vencer': return { label: 'Atenção', cls: 'a_vencer', Ico: IcoAlert };
       case 'vencido': case 'sem_registro': return { label: 'Com pendências', cls: 'vencido', Ico: IcoAlertTriangle };
-      default: return { label: 'Desconhecido', cls: '', Ico: IcoAlert };
+      default: return { label: 'Com pendências', cls: 'vencido', Ico: IcoAlertTriangle };
     }
   };
 
@@ -47,69 +47,105 @@ export default function CondominioCard({ condominio, onEdit }) {
     return 'Sem registro de execução/validade';
   };
 
-  const codigoStr = String(condominio.id).padStart(3, '0');
+  const codigoStr = condominio.codigo ? String(condominio.codigo).padStart(2, '0') : String(condominio.id).padStart(2, '0');
+
+  // Garante a ordem dos 6 serviços fixos como no desenho do usuário:
+  // Dedetização | Limpeza | Extintor | AVCB | Seguro | SPDA
+  const servicosPadrao = [
+    { chave: 'dedetizacao', nomeDisplay: 'Dedetização', defaultNome: 'Dedetização' },
+    { chave: 'reservatorio', nomeDisplay: 'Limpeza', defaultNome: 'Reservatórios' },
+    { chave: 'extintor', nomeDisplay: 'Extintor', defaultNome: 'Extintores' },
+    { chave: 'avcb', nomeDisplay: 'AVCB', defaultNome: 'AVCB' },
+    { chave: 'seguro', nomeDisplay: 'Seguro', defaultNome: 'Seguro' },
+    { chave: 'spda', nomeDisplay: 'SPDA', defaultNome: 'SPDA' },
+  ];
+
+  const servicosExibicao = servicosPadrao.map(padrao => {
+    const encontrado = condominio.servicos?.find(s => s.chave === padrao.chave);
+    return encontrado || {
+      chave: padrao.chave,
+      nome: padrao.defaultNome,
+      status: 'sem_registro'
+    };
+  });
 
   return (
     <div className="cond-card" onClick={() => navigate(`/condominios/${condominio.id}`)}>
-      <div className="cond-card-header">
-        <div className="cond-card-title">
-          {condominio.imagem ? (
-            <img 
-              src={condominio.imagem} 
-              alt="Foto do condomínio" 
-              className="cond-card-img" 
-              onError={(e) => { 
-                e.target.onerror = null;
-                e.target.src = '';
-                e.target.style.display = 'none';
-              }} 
-            />
-          ) : (
-            <div className="cond-card-img-placeholder">🏢</div>
-          )}
-          <div className="cond-card-info">
-            <div className="cond-card-code">{codigoStr}</div>
-            <h3 className="cond-card-name">{condominio.nome}</h3>
-            <p className="cond-card-address">
-              <span className="cond-loc-ico">📍</span> {condominio.endereco || 'Endereço não informado'}
-            </p>
-            <p className="cond-card-gerente" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-              <span><span className="cond-mgr-ico">👤</span> {condominio.gerente_nome || 'Sem gerente'}</span>
-              <span className="cond-badge-gerente">Gerente</span>
-              {condominio.quantidade_apartamentos ? (
-                <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                  🏢 {condominio.quantidade_apartamentos} {Number(condominio.quantidade_apartamentos) === 1 ? 'unidade' : 'unidades'}
-                </span>
-              ) : null}
-            </p>
+      {/* Botão de Opções rápido no canto superior */}
+      <div className="cond-card-top-actions">
+        <button className="cond-btn-icon-float" onClick={handleAction} title="Opções do Condomínio">
+          <IcoEngrenagem width="16" height="16" />
+        </button>
+      </div>
+
+      {/* 1. Imagem de Capa do Condomínio */}
+      <div className="cond-card-banner">
+        {condominio.imagem ? (
+          <img 
+            src={condominio.imagem} 
+            alt="Foto do condomínio" 
+            className="cond-card-banner-img" 
+            onError={(e) => { 
+              e.target.onerror = null;
+              e.target.src = '/Bg_login.png';
+            }} 
+          />
+        ) : (
+          <div className="cond-card-banner-placeholder">
+            <img src="/Bg_login.png" alt="Condomínio" className="cond-card-banner-img" style={{ opacity: 0.35, filter: 'grayscale(0.3)' }} />
+            <div className="cond-banner-overlay-icon">🏢</div>
+          </div>
+        )}
+      </div>
+
+      {/* 2. Informações Principais (Centralizadas) */}
+      <div className="cond-card-body">
+        <h3 className="cond-card-name-centered">
+          {codigoStr} - {condominio.nome}
+        </h3>
+
+        <p className="cond-card-address-centered">
+          {condominio.endereco || 'Endereço não informado'}
+        </p>
+
+        <div className="cond-card-meta-centered">
+          <div className="cond-meta-gerente">Gerente: {condominio.gerente_nome || 'Não atribuído'}</div>
+          <div className="cond-meta-unidades">
+            {condominio.quantidade_apartamentos 
+              ? `${condominio.quantidade_apartamentos} ${Number(condominio.quantidade_apartamentos) === 1 ? 'Unidade' : 'Unidades'}` 
+              : '14 Unidades'}
           </div>
         </div>
-        <div className="cond-card-actions">
-          <button className="cond-btn-icon" onClick={handleAction} title="Opções"><IcoDots /></button>
-          <div className={`cond-card-status cond-status-${mainStatus.cls}`}>
+
+        {/* 3. Badge de Status (Alinhado à direita antes da barra de serviços) */}
+        <div className="cond-card-status-row">
+          <span className={`cond-card-status-pill cond-status-${mainStatus.cls}`}>
             <mainStatus.Ico /> {mainStatus.label}
-          </div>
+          </span>
+        </div>
+
+        {/* 4. Grade Interna dos 6 Serviços com Ícone, Nome e Bolinha de Status */}
+        <div className="cond-services-grid">
+          {servicosExibicao.map((s, idx) => {
+            const SvgIcon = iconMap[s.chave] || IcoCheckCircle;
+            const nomeExibicao = s.chave === 'reservatorio' ? 'Limpeza' : (s.nome ? s.nome.split(' ')[0] : s.chave);
+            return (
+              <div key={idx} className="cond-service-item">
+                <div className="cond-service-icon"><SvgIcon /></div>
+                <div className="cond-service-name">{nomeExibicao}</div>
+                <div className={`cond-service-dot dot-${s.status || 'sem_registro'}`}></div>
+                
+                <div className="cond-tooltip">
+                  <strong>{s.nome || nomeExibicao}</strong><br/>
+                  {getServiceStatusText(s)}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <div className="cond-services-grid">
-        {condominio.servicos && condominio.servicos.map((s, idx) => {
-          const SvgIcon = iconMap[s.chave] || IcoCheckCircle;
-          return (
-            <div key={idx} className="cond-service-item">
-              <div className="cond-service-icon"><SvgIcon /></div>
-              <div className="cond-service-name">{s.nome.split(' ')[0]}</div>
-              <div className={`cond-service-dot dot-${s.status}`}></div>
-              
-              <div className="cond-tooltip">
-                <strong>{s.nome}</strong><br/>
-                {getServiceStatusText(s)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
+      {/* 5. Rodapé: Última Atualização + Botão Acessar */}
       <div className="cond-card-footer">
         <div className="cond-last-update">
           <span className="cond-clock-ico"><IcoRelogio /></span>
