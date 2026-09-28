@@ -33,49 +33,8 @@ function calcularStatusSeguro(dataValidade) {
   return { status: 'ativo', diasRestantes };
 }
 
-// Configuração de armazenamento oficial na nuvem (OneDrive):
-// CONDOMÍNIOS/SEGUROS/[ano]/[codigo_condominio]/[arquivo]
-const NUVEM_CONDOMINIOS_DIR =
-  process.env.NUVEM_DIR ||
-  'C:\\Users\\lesco\\OneDrive - IMCosta Administradora\\Arquivos de Leandro Costa - IMCosta - IMCosta Files\\CONDOMÍNIOS';
+const storageService = require('../services/storage/storage.service');
 
-function getStoragePathSeguros(ano, codigoCondominio) {
-  let baseDir = '';
-  if (fs.existsSync(NUVEM_CONDOMINIOS_DIR)) {
-    baseDir = path.join(NUVEM_CONDOMINIOS_DIR, 'SEGUROS');
-  } else {
-    const dataDir = process.env.DB_DIR || path.join(__dirname, '../../data');
-    baseDir = path.join(dataDir, 'adm', 'seguros');
-  }
-
-  const dir = path.join(baseDir, String(ano), String(codigoCondominio).padStart(3, '0'));
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  return dir;
-}
-
-const storageSeguros = multer.diskStorage({
-  destination: function (req, file, cb) {
-    try {
-      const ano = req.body.ano || new Date().getFullYear();
-      const codigoCondominio = req.body.codigo_condominio || String(req.params.condominioId).padStart(3, '0');
-      const dir = getStoragePathSeguros(ano, codigoCondominio);
-      cb(null, dir);
-    } catch (err) {
-      cb(err, null);
-    }
-  },
-  filename: function (req, file, cb) {
-    const ano = req.body.ano || new Date().getFullYear();
-    const tipo = (req.body.tipo || 'documento').toLowerCase().replace(/\s+/g, '_');
-    const ext = path.extname(file.originalname);
-    const uniqueSuffix = Date.now().toString().slice(-4);
-    cb(null, `${tipo}_${ano}_${uniqueSuffix}${ext}`);
-  }
-});
-
-const uploadSeguros = multer({ storage: storageSeguros, limits: { fileSize: 25 * 1024 * 1024 } });
 const uploadMemoria = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
 const { extrairDadosApolicePDF } = require('../services/apoliceParser');
 
@@ -948,7 +907,7 @@ router.delete('/sinistros/:sinistroId', (req, res) => {
 // ============================================================
 // 6. Documentos: Upload organizado por ano/código e DELETE
 // ============================================================
-router.post('/:condominioId/documentos', uploadSeguros.single('documento'), (req, res) => {
+router.post('/:condominioId/documentos', uploadMemoria.single('documento'), async (req, res) => {
   const condId = Number(req.params.condominioId);
   if (!podeAcessarCondominio(req.usuario, condId)) {
     return res.status(403).json({ erro: 'Acesso negado a este condomínio.' });
@@ -958,9 +917,25 @@ router.post('/:condominioId/documentos', uploadSeguros.single('documento'), (req
     return res.status(400).json({ erro: 'Nenhum arquivo enviado.' });
   }
 
-  const { tipo = 'Apólice', sinistro_id, ano = new Date().getFullYear() } = req.body || {};
+  const { tipo = 'Apólice', sinistro_id, ano = new Date().getFullYear(), codigo_condominio } = req.body || {};
+  const codCondominio = codigo_condominio || String(condId).padStart(3, '0');
 
   try {
+    const ext = path.extname(req.file.originalname) || '.pdf';
+    const tipoSanitizado = (tipo || 'documento').toLowerCase().replace(/\s+/g, '_');
+    const uniqueSuffix = Date.now().toString().slice(-4);
+    const customFilename = `${tipoSanitizado}_${ano}_${uniqueSuffix}${ext}`;
+
+    const uploaded = await storageService.upload({
+      buffer: req.file.buffer,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      modulo: 'SEGUROS',
+      ano,
+      codigoCondominio: codCondominio,
+      customFilename
+    });
+
     let seguro = db.prepare('SELECT id FROM seguros WHERE condominio_id = ?').get(condId);
     if (!seguro) {
       const info = db.prepare(`
@@ -979,30 +954,32 @@ router.post('/:condominioId/documentos', uploadSeguros.single('documento'), (req
       sinistro_id ? Number(sinistro_id) : null,
       req.file.originalname,
       tipo,
-      req.file.size,
+      uploaded.size,
       Number(ano),
-      req.file.path,
-      `/api/upload/preview?path=${encodeURIComponent(req.file.path)}`,
+      uploaded.path,
+      uploaded.url,
       req.usuario.id
     );
 
     registrarAuditoriaDetalhada(req, 'seguro_documentos', infoDoc.lastInsertRowid, 'UPLOAD_DOCUMENTO', [
-      { campo: 'Upload de Documento', anterior: '—', novo: `${tipo}: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)} KB)` }
+      { campo: 'Upload de Documento', anterior: '—', novo: `${tipo}: ${req.file.originalname} (${(uploaded.size / 1024).toFixed(1)} KB)` }
     ]);
 
     res.json({
       ok: true,
       id: infoDoc.lastInsertRowid,
       nome_arquivo: req.file.originalname,
-      caminho: req.file.path,
-      url: `/api/upload/preview?path=${encodeURIComponent(req.file.path)}`
+      caminho: uploaded.path,
+      url: uploaded.url,
+      provider: uploaded.provider
     });
   } catch (err) {
+    console.error('[POST /seguros/:condominioId/documentos] Erro:', err);
     res.status(500).json({ erro: 'Erro ao registrar documento: ' + err.message });
   }
 });
 
-router.delete('/documentos/:documentoId', (req, res) => {
+router.delete('/documentos/:documentoId', async (req, res) => {
   const docId = Number(req.params.documentoId);
   try {
     const doc = db.prepare('SELECT * FROM seguro_documentos WHERE id = ?').get(docId);
@@ -1011,10 +988,10 @@ router.delete('/documentos/:documentoId', (req, res) => {
     db.prepare('DELETE FROM seguro_documentos WHERE id = ?').run(docId);
 
     try {
-      if (fs.existsSync(doc.caminho)) {
-        fs.unlinkSync(doc.caminho);
-      }
-    } catch (e) {}
+      await storageService.deleteFile(doc.caminho);
+    } catch (e) {
+      console.warn('[DELETE seguro_documentos] Aviso ao excluir no storage:', e.message);
+    }
 
     registrarAuditoriaDetalhada(req, 'seguro_documentos', docId, 'EXCLUIR_DOCUMENTO', [
       { campo: 'Exclusão de Documento', anterior: doc.nome_arquivo, novo: 'Removido' }

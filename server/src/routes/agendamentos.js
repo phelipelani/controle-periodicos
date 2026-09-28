@@ -8,70 +8,12 @@ const { registrarServico } = require('../estado');
 
 const router = express.Router();
 
-// Configuração do multer para salvar recibos no OneDrive em:
-// CONDOMÍNIOS/DEDETIZAÇÃO/[ano]/[codigoCondominio]/
-const NUVEM_CONDOMINIOS_DIR =
-  process.env.NUVEM_DIR ||
-  'C:\\Users\\lesco\\OneDrive - IMCosta Administradora\\Arquivos de Leandro Costa - IMCosta - IMCosta Files\\CONDOMÍNIOS';
+const storageService = require('../services/storage/storage.service');
 
-const getUploadDirDedetizacao = (ano, codigoCondominio) => {
-  let baseDir = '';
-  if (fs.existsSync(NUVEM_CONDOMINIOS_DIR)) {
-    baseDir = path.join(NUVEM_CONDOMINIOS_DIR, 'DEDETIZAÇÃO');
-  } else {
-    const dataDir = process.env.DB_DIR || path.join(__dirname, '../../data');
-    baseDir = path.join(dataDir, 'adm', 'dedetizacao');
-  }
-
-  let codFormatado = '001';
-  if (codigoCondominio !== undefined && codigoCondominio !== null && String(codigoCondominio).trim() !== '') {
-    const num = parseInt(codigoCondominio, 10);
-    codFormatado = !isNaN(num) && num > 0 ? String(num).padStart(3, '0') : String(codigoCondominio).padStart(3, '0');
-  }
-  const anoFinal = String(ano || new Date().getFullYear());
-  const dir = path.join(baseDir, anoFinal, codFormatado);
-  
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  return dir;
-};
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    try {
-      const ano = req.query.ano || req.body.ano || (req.body.data_realizacao ? req.body.data_realizacao.split('-')[0] : null) || new Date().getFullYear();
-      let codigoCondominio = req.query.codigo_condominio || req.query.condominio_id || req.body.codigo_condominio || req.body.condominio_id;
-      
-      if (!codigoCondominio && req.params && req.params.id) {
-        try {
-          const row = db.prepare(`
-            SELECT c.id AS condominio_id
-            FROM agendamentos a
-            JOIN condominios c ON c.id = a.condominio_id
-            WHERE a.id = ?
-          `).get(req.params.id);
-          if (row) codigoCondominio = row.condominio_id;
-        } catch (e) {
-          // ignore
-        }
-      }
-
-      const dir = getUploadDirDedetizacao(ano, codigoCondominio);
-      cb(null, dir);
-    } catch (err) {
-      cb(err, null);
-    }
-  },
-  filename: function (req, file, cb) {
-    const ano = req.query.ano || req.body.ano || (req.body.data_realizacao ? req.body.data_realizacao.split('-')[0] : null) || new Date().getFullYear();
-    const uniqueSuffix = Date.now().toString().slice(-6);
-    const ext = path.extname(file.originalname);
-    cb(null, `recibo_dedetizacao_${ano}_${uniqueSuffix}${ext}`);
-  }
+const uploadMemoria = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 30 * 1024 * 1024 }
 });
-
-const upload = multer({ storage: storage, limits: { fileSize: 30 * 1024 * 1024 } });
 
 const crypto = require('crypto');
 
@@ -339,7 +281,7 @@ router.post('/', (req, res) => {
 });
 
 // Confirmar realização de agendamento (passou a data ou executado)
-router.post('/:id/confirmar', upload.single('documento'), (req, res) => {
+router.post('/:id/confirmar', uploadMemoria.single('documento'), async (req, res) => {
   const id = Number(req.params.id);
   const ag = db.prepare(`
     SELECT a.*, c.nome AS condominio_nome, printf('%03d', c.id) AS codigo_condominio
@@ -357,7 +299,29 @@ router.post('/:id/confirmar', upload.single('documento'), (req, res) => {
   const dataExecucao = data_realizacao || ag.data_agendada;
   const empresaExec = empresa !== undefined ? (empresa ? String(empresa).trim().toUpperCase() : null) : ag.empresa;
   const obs = observacao !== undefined ? observacao : ag.observacao;
-  const anexoCaminho = req.file ? req.file.path : (ag.anexo || null);
+  
+  let anexoCaminho = ag.anexo || null;
+  if (req.file) {
+    try {
+      const anoFinal = (dataExecucao ? dataExecucao.split('-')[0] : null) || new Date().getFullYear();
+      const ext = path.extname(req.file.originalname) || '.pdf';
+      const uniqueSuffix = Date.now().toString().slice(-6);
+      const customFilename = `recibo_dedetizacao_${anoFinal}_${uniqueSuffix}${ext}`;
+
+      const uploaded = await storageService.upload({
+        buffer: req.file.buffer,
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        modulo: 'DEDETIZAÇÃO',
+        ano: anoFinal,
+        codigoCondominio: ag.codigo_condominio || ag.condominio_id,
+        customFilename
+      });
+      anexoCaminho = uploaded.path;
+    } catch (err) {
+      console.error('[POST /agendamentos/:id/confirmar] Erro no upload:', err);
+    }
+  }
 
   // 1. Atualizar o serviço do condomínio (condominio_servicos + novo histórico)
   const csAtualizado = registrarServico({
@@ -391,7 +355,7 @@ router.post('/:id/confirmar', upload.single('documento'), (req, res) => {
 });
 
 // Anexar recibo / nota fiscal a um agendamento já realizado
-router.post('/:id/recibo', upload.single('documento'), (req, res) => {
+router.post('/:id/recibo', uploadMemoria.single('documento'), async (req, res) => {
   const id = Number(req.params.id);
   const ag = db.prepare(`
     SELECT a.*, c.nome AS condominio_nome, printf('%03d', c.id) AS codigo_condominio
@@ -408,27 +372,48 @@ router.post('/:id/recibo', upload.single('documento'), (req, res) => {
     return res.status(400).json({ erro: 'Nenhum arquivo enviado.' });
   }
 
-  const anexoCaminho = req.file.path;
+  try {
+    const anoFinal = (ag.data_agendada ? ag.data_agendada.split('-')[0] : null) || new Date().getFullYear();
+    const ext = path.extname(req.file.originalname) || '.pdf';
+    const uniqueSuffix = Date.now().toString().slice(-6);
+    const customFilename = `recibo_dedetizacao_${anoFinal}_${uniqueSuffix}${ext}`;
 
-  // Atualiza anexo no agendamento
-  db.prepare('UPDATE agendamentos SET anexo = ? WHERE id = ?').run(anexoCaminho, id);
+    const uploaded = await storageService.upload({
+      buffer: req.file.buffer,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      modulo: 'DEDETIZAÇÃO',
+      ano: anoFinal,
+      codigoCondominio: ag.codigo_condominio || ag.condominio_id,
+      customFilename
+    });
 
-  // Atualiza anexo no último histórico deste condomínio/serviço
-  const cs = db.prepare('SELECT id FROM condominio_servicos WHERE condominio_id = ? AND servico_id = ?').get(ag.condominio_id, ag.servico_id);
-  if (cs) {
-    db.prepare(`
-      UPDATE historico 
-      SET anexo = ? 
-      WHERE id = (SELECT MAX(id) FROM historico WHERE condominio_servico_id = ?)
-    `).run(anexoCaminho, cs.id);
+    const anexoCaminho = uploaded.path;
+
+    // Atualiza anexo no agendamento
+    db.prepare('UPDATE agendamentos SET anexo = ? WHERE id = ?').run(anexoCaminho, id);
+
+    // Atualiza anexo no último histórico deste condomínio/serviço
+    const cs = db.prepare('SELECT id FROM condominio_servicos WHERE condominio_id = ? AND servico_id = ?').get(ag.condominio_id, ag.servico_id);
+    if (cs) {
+      db.prepare(`
+        UPDATE historico 
+        SET anexo = ? 
+        WHERE id = (SELECT MAX(id) FROM historico WHERE condominio_servico_id = ?)
+      `).run(anexoCaminho, cs.id);
+    }
+
+    res.json({
+      ok: true,
+      mensagem: 'Recibo anexado com sucesso!',
+      caminho: anexoCaminho,
+      url: uploaded.url,
+      agendamento: db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(id)
+    });
+  } catch (err) {
+    console.error('[POST /agendamentos/:id/recibo] Erro:', err);
+    res.status(500).json({ erro: 'Erro ao anexar recibo: ' + err.message });
   }
-
-  res.json({
-    ok: true,
-    mensagem: 'Recibo anexado com sucesso!',
-    caminho: anexoCaminho,
-    agendamento: db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(id)
-  });
 });
 
 // Obter lista detalhada de adesões de um agendamento

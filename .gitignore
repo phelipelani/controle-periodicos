@@ -3,6 +3,14 @@ server/data/*.db
 server/data/*.db-shm
 server/data/*.db-wal
 .env
+.env.*
+*.env
+server/.env
+server/.env.*
+web/.env
+web/.env.*
 *.log
 dist/
+web/dist/
 .DS_Store
+

@@ -30,38 +30,12 @@ function calcularStatusSpda(dataValidade) {
   return { status: 'em_dia', diasRestantes };
 }
 
-// Configuração de armazenamento organizado em nuvem/disco:
-// adm/spda/[ano]/[codigo_condominio]/[arquivo]
-function getStoragePathSpda(ano, codigoCondominio) {
-  const dataDir = process.env.DB_DIR || path.join(__dirname, '../../data');
-  const dir = path.join(dataDir, 'adm', 'spda', String(ano), String(codigoCondominio).padStart(3, '0'));
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  return dir;
-}
+const storageService = require('../services/storage/storage.service');
 
-const storageSpda = multer.diskStorage({
-  destination: function (req, file, cb) {
-    try {
-      const ano = req.body.ano || new Date().getFullYear();
-      const codigoCondominio = req.body.codigo_condominio || String(req.params.condominioId || '1').padStart(3, '0');
-      const dir = getStoragePathSpda(ano, codigoCondominio);
-      cb(null, dir);
-    } catch (err) {
-      cb(err, null);
-    }
-  },
-  filename: function (req, file, cb) {
-    const ano = req.body.ano || new Date().getFullYear();
-    const tipo = (req.body.tipo || 'laudo_spda').toLowerCase().replace(/\s+/g, '_');
-    const ext = path.extname(file.originalname);
-    const uniqueSuffix = Date.now().toString().slice(-4);
-    cb(null, `${tipo}_${ano}_${uniqueSuffix}${ext}`);
-  }
+const uploadMemoria = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }
 });
-
-const uploadSpda = multer({ storage: storageSpda, limits: { fileSize: 25 * 1024 * 1024 } });
 
 // ============================================================
 // 1. GET /api/spda - Listagem de todos os condomínios + KPIs
@@ -406,7 +380,7 @@ router.post('/', (req, res) => {
 // ============================================================
 // 4. POST /api/spda/:condominioId/documentos - Upload Documento
 // ============================================================
-router.post('/:condominioId/documentos', uploadSpda.single('documento'), (req, res) => {
+router.post('/:condominioId/documentos', uploadMemoria.single('documento'), async (req, res) => {
   const condominioId = Number(req.params.condominioId);
   if (!podeAcessarCondominio(req.usuario, condominioId)) {
     return res.status(403).json({ erro: 'Acesso negado a este condomínio.' });
@@ -419,56 +393,76 @@ router.post('/:condominioId/documentos', uploadSpda.single('documento'), (req, r
   const spda = db.prepare('SELECT id FROM spda_registros WHERE condominio_id = ?').get(condominioId);
   const ano = Number(req.body.ano) || new Date().getFullYear();
   const tipo = req.body.tipo || 'Laudo SPDA';
+  const codigoCondominio = req.body.codigo_condominio || String(condominioId).padStart(3, '0');
 
-  const dataDir = process.env.DB_DIR || path.join(__dirname, '../../data');
-  const caminhoRelativo = path.relative(dataDir, req.file.path).replace(/\\/g, '/');
+  try {
+    const ext = path.extname(req.file.originalname) || '.pdf';
+    const tipoSanitizado = (tipo || 'spda').toLowerCase().replace(/\s+/g, '_');
+    const uniqueSuffix = Date.now().toString().slice(-4);
+    const customFilename = `${tipoSanitizado}_${ano}_${uniqueSuffix}${ext}`;
 
-  const result = db.prepare(`
-    INSERT INTO spda_documentos (
-      spda_id, condominio_id, nome_arquivo, tipo_arquivo, tamanho, ano, caminho, url, uploaded_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    spda ? spda.id : null,
-    condominioId,
-    req.file.originalname,
-    tipo,
-    req.file.size,
-    ano,
-    caminhoRelativo,
-    `/api/upload/preview?path=${encodeURIComponent(caminhoRelativo)}`,
-    req.usuario.id
-  );
+    const uploaded = await storageService.upload({
+      buffer: req.file.buffer,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      modulo: 'SPDA',
+      ano,
+      codigoCondominio,
+      customFilename
+    });
 
-  db.prepare(`
-    INSERT INTO auditoria (
-      usuario_id, usuario_nome, papel, acao, entidade, entidade_id, campo, valor_novo, detalhes, ip
-    ) VALUES (?, ?, ?, 'UPLOAD_DOC', 'spda', ?, 'documento', ?, ?, ?)
-  `).run(
-    req.usuario.id,
-    req.usuario.nome,
-    req.usuario.papel,
-    spda?.id || condominioId,
-    req.file.originalname,
-    `Documento "${req.file.originalname}" (${tipo}) anexado ao SPDA`,
-    req.ip
-  );
+    const result = db.prepare(`
+      INSERT INTO spda_documentos (
+        spda_id, condominio_id, nome_arquivo, tipo_arquivo, tamanho, ano, caminho, url, uploaded_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      spda ? spda.id : null,
+      condominioId,
+      req.file.originalname,
+      tipo,
+      uploaded.size,
+      ano,
+      uploaded.path,
+      uploaded.url,
+      req.usuario.id
+    );
 
-  res.json({
-    sucesso: true,
-    documento: {
-      id: result.lastInsertRowid,
-      nome_arquivo: req.file.originalname,
-      tipo_arquivo: tipo,
-      tamanho: req.file.size,
-      caminho: caminhoRelativo
-    }
-  });
+    db.prepare(`
+      INSERT INTO auditoria (
+        usuario_id, usuario_nome, papel, acao, entidade, entidade_id, campo, valor_novo, detalhes, ip
+      ) VALUES (?, ?, ?, 'UPLOAD_DOC', 'spda', ?, 'documento', ?, ?, ?)
+    `).run(
+      req.usuario.id,
+      req.usuario.nome,
+      req.usuario.papel,
+      spda?.id || condominioId,
+      req.file.originalname,
+      `Documento "${req.file.originalname}" (${tipo}) anexado ao SPDA`,
+      req.ip
+    );
+
+    res.json({
+      sucesso: true,
+      documento: {
+        id: result.lastInsertRowid,
+        nome_arquivo: req.file.originalname,
+        tipo_arquivo: tipo,
+        tamanho: uploaded.size,
+        caminho: uploaded.path,
+        url: uploaded.url,
+        provider: uploaded.provider
+      }
+    });
+  } catch (err) {
+    console.error('[POST /spda/:condominioId/documentos] Erro:', err);
+    res.status(500).json({ erro: 'Erro ao registrar documento: ' + err.message });
+  }
 });
 
 // ============================================================
 // 5. DELETE /api/spda/documentos/:docId - Excluir Documento
 // ============================================================
-router.delete('/documentos/:docId', (req, res) => {
+router.delete('/documentos/:docId', async (req, res) => {
   const docId = Number(req.params.docId);
   const doc = db.prepare('SELECT * FROM spda_documentos WHERE id = ?').get(docId);
 
@@ -480,15 +474,10 @@ router.delete('/documentos/:docId', (req, res) => {
     return res.status(403).json({ erro: 'Acesso negado.' });
   }
 
-  // Deletar arquivo físico se existir
-  const dataDir = process.env.DB_DIR || path.join(__dirname, '../../data');
-  const fullPath = path.join(dataDir, doc.caminho);
-  if (fs.existsSync(fullPath)) {
-    try {
-      fs.unlinkSync(fullPath);
-    } catch (e) {
-      console.error('Erro ao remover arquivo físico:', e);
-    }
+  try {
+    await storageService.deleteFile(doc.caminho);
+  } catch (e) {
+    console.warn('[DELETE spda_documentos] Aviso ao excluir no storage:', e.message);
   }
 
   db.prepare('DELETE FROM spda_documentos WHERE id = ?').run(docId);

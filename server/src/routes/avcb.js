@@ -30,38 +30,12 @@ function calcularStatusAvcb(dataValidade) {
   return { status: 'em_dia', diasRestantes };
 }
 
-// Configuração de armazenamento organizado em nuvem/disco:
-// adm/avcb/[ano]/[codigo_condominio]/[arquivo]
-function getStoragePathAvcb(ano, codigoCondominio) {
-  const dataDir = process.env.DB_DIR || path.join(__dirname, '../../data');
-  const dir = path.join(dataDir, 'adm', 'avcb', String(ano), String(codigoCondominio).padStart(3, '0'));
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  return dir;
-}
+const storageService = require('../services/storage/storage.service');
 
-const storageAvcb = multer.diskStorage({
-  destination: function (req, file, cb) {
-    try {
-      const ano = req.body.ano || new Date().getFullYear();
-      const codigoCondominio = req.body.codigo_condominio || String(req.params.condominioId || '1').padStart(3, '0');
-      const dir = getStoragePathAvcb(ano, codigoCondominio);
-      cb(null, dir);
-    } catch (err) {
-      cb(err, null);
-    }
-  },
-  filename: function (req, file, cb) {
-    const ano = req.body.ano || new Date().getFullYear();
-    const tipo = (req.body.tipo || 'avcb').toLowerCase().replace(/\s+/g, '_');
-    const ext = path.extname(file.originalname);
-    const uniqueSuffix = Date.now().toString().slice(-4);
-    cb(null, `${tipo}_${ano}_${uniqueSuffix}${ext}`);
-  }
+const uploadMemoria = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }
 });
-
-const uploadAvcb = multer({ storage: storageAvcb, limits: { fileSize: 25 * 1024 * 1024 } });
 
 // ============================================================
 // 1. GET /api/avcb - Listagem de todos os condomínios + KPIs
@@ -414,7 +388,7 @@ router.post('/', (req, res) => {
 // ============================================================
 // 4. POST /api/avcb/:condominioId/documentos - Upload Documento
 // ============================================================
-router.post('/:condominioId/documentos', uploadAvcb.single('documento'), (req, res) => {
+router.post('/:condominioId/documentos', uploadMemoria.single('documento'), async (req, res) => {
   const condominioId = Number(req.params.condominioId);
   if (!podeAcessarCondominio(req.usuario, condominioId)) {
     return res.status(403).json({ erro: 'Acesso negado a este condomínio.' });
@@ -427,56 +401,76 @@ router.post('/:condominioId/documentos', uploadAvcb.single('documento'), (req, r
   const avcb = db.prepare('SELECT id FROM avcb_registros WHERE condominio_id = ?').get(condominioId);
   const ano = Number(req.body.ano) || new Date().getFullYear();
   const tipo = req.body.tipo || 'AVCB';
+  const codigoCondominio = req.body.codigo_condominio || String(condominioId).padStart(3, '0');
 
-  const dataDir = process.env.DB_DIR || path.join(__dirname, '../../data');
-  const caminhoRelativo = path.relative(dataDir, req.file.path).replace(/\\/g, '/');
+  try {
+    const ext = path.extname(req.file.originalname) || '.pdf';
+    const tipoSanitizado = (tipo || 'avcb').toLowerCase().replace(/\s+/g, '_');
+    const uniqueSuffix = Date.now().toString().slice(-4);
+    const customFilename = `${tipoSanitizado}_${ano}_${uniqueSuffix}${ext}`;
 
-  const result = db.prepare(`
-    INSERT INTO avcb_documentos (
-      avcb_id, condominio_id, nome_arquivo, tipo_arquivo, tamanho, ano, caminho, url, uploaded_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    avcb ? avcb.id : null,
-    condominioId,
-    req.file.originalname,
-    tipo,
-    req.file.size,
-    ano,
-    caminhoRelativo,
-    `/api/upload/preview?path=${encodeURIComponent(caminhoRelativo)}`,
-    req.usuario.id
-  );
+    const uploaded = await storageService.upload({
+      buffer: req.file.buffer,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      modulo: 'AVCB',
+      ano,
+      codigoCondominio,
+      customFilename
+    });
 
-  db.prepare(`
-    INSERT INTO auditoria (
-      usuario_id, usuario_nome, papel, acao, entidade, entidade_id, campo, valor_novo, detalhes, ip
-    ) VALUES (?, ?, ?, 'UPLOAD_DOC', 'avcb', ?, 'documento', ?, ?, ?)
-  `).run(
-    req.usuario.id,
-    req.usuario.nome,
-    req.usuario.papel,
-    avcb?.id || condominioId,
-    req.file.originalname,
-    `Documento "${req.file.originalname}" (${tipo}) anexado ao AVCB`,
-    req.ip
-  );
+    const result = db.prepare(`
+      INSERT INTO avcb_documentos (
+        avcb_id, condominio_id, nome_arquivo, tipo_arquivo, tamanho, ano, caminho, url, uploaded_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      avcb ? avcb.id : null,
+      condominioId,
+      req.file.originalname,
+      tipo,
+      uploaded.size,
+      ano,
+      uploaded.path,
+      uploaded.url,
+      req.usuario.id
+    );
 
-  res.json({
-    sucesso: true,
-    documento: {
-      id: result.lastInsertRowid,
-      nome_arquivo: req.file.originalname,
-      tipo_arquivo: tipo,
-      tamanho: req.file.size,
-      caminho: caminhoRelativo
-    }
-  });
+    db.prepare(`
+      INSERT INTO auditoria (
+        usuario_id, usuario_nome, papel, acao, entidade, entidade_id, campo, valor_novo, detalhes, ip
+      ) VALUES (?, ?, ?, 'UPLOAD_DOC', 'avcb', ?, 'documento', ?, ?, ?)
+    `).run(
+      req.usuario.id,
+      req.usuario.nome,
+      req.usuario.papel,
+      avcb?.id || condominioId,
+      req.file.originalname,
+      `Documento "${req.file.originalname}" (${tipo}) anexado ao AVCB`,
+      req.ip
+    );
+
+    res.json({
+      sucesso: true,
+      documento: {
+        id: result.lastInsertRowid,
+        nome_arquivo: req.file.originalname,
+        tipo_arquivo: tipo,
+        tamanho: uploaded.size,
+        caminho: uploaded.path,
+        url: uploaded.url,
+        provider: uploaded.provider
+      }
+    });
+  } catch (err) {
+    console.error('[POST /avcb/:condominioId/documentos] Erro:', err);
+    res.status(500).json({ erro: 'Erro ao registrar documento: ' + err.message });
+  }
 });
 
 // ============================================================
 // 5. DELETE /api/avcb/documentos/:docId - Excluir Documento
 // ============================================================
-router.delete('/documentos/:docId', (req, res) => {
+router.delete('/documentos/:docId', async (req, res) => {
   const docId = Number(req.params.docId);
   const doc = db.prepare('SELECT * FROM avcb_documentos WHERE id = ?').get(docId);
 
@@ -488,15 +482,10 @@ router.delete('/documentos/:docId', (req, res) => {
     return res.status(403).json({ erro: 'Acesso negado.' });
   }
 
-  // Deletar arquivo físico se existir
-  const dataDir = process.env.DB_DIR || path.join(__dirname, '../../data');
-  const fullPath = path.join(dataDir, doc.caminho);
-  if (fs.existsSync(fullPath)) {
-    try {
-      fs.unlinkSync(fullPath);
-    } catch (e) {
-      console.error('Erro ao remover arquivo físico:', e);
-    }
+  try {
+    await storageService.deleteFile(doc.caminho);
+  } catch (e) {
+    console.warn('[DELETE avcb_documentos] Aviso ao excluir no storage:', e.message);
   }
 
   db.prepare('DELETE FROM avcb_documentos WHERE id = ?').run(docId);
