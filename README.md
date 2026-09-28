@@ -77,30 +77,22 @@ Existe uma separação estrita entre o **Banco de Dados Relacional** e o **Armaz
 - ⚠️ **REGRA CRÍTICA**: O arquivo `controle.db` **NÃO DEVE** ser colocado dentro de pastas sincronizadas por nuvem (OneDrive, Dropbox, Google Drive). Softwares de sincronização travam os arquivos `-wal` e `-shm` do SQLite durante escritas, causando corrupção ou regressão de dados.
 - Configure `DB_DIR` apontando para uma pasta no disco local do servidor (ex.: `C:\controle-periodicos-data` no Windows ou `/var/lib/controle-periodicos` no Linux).
 
-### 2. Armazenamento Direto no Microsoft OneDrive (Microsoft Graph API)
-- Os arquivos anexados (PDFs de apólices, laudos AVCB/SPDA, certificados de dedetização e fotos) são enviados diretamente para o **OneDrive Corporativo** via **Microsoft Graph API** (`@azure/identity` + `@microsoft/microsoft-graph-client`).
-- **Zero dependência de software Desktop**: O servidor pode rodar em Linux, Windows Server, VPS ou VPN sem ter o app do OneDrive instalado e sem pastas locais sincronizadas.
-- O sistema organiza e cria as subpastas automaticamente na nuvem na seguinte estrutura:
+### 2. Armazenamento de Arquivos em Nuvem / Rede (`NUVEM_DIR`)
+- Os arquivos anexados (PDFs de apólices, certificados de dedetização, comprovantes) são salvos na pasta configurada em `NUVEM_DIR`.
+- Pode ser uma pasta do **OneDrive Corporativo**, **Google Drive Desktop** ou **compartilhamento de rede (SMB/NAS)**.
+- O sistema organiza e cria as subpastas automaticamente na seguinte estrutura:
   ```
-  [ONEDRIVE_ROOT_FOLDER (CONDOMÍNIOS)]/
+  [NUVEM_DIR]/
   ├── DEDETIZAÇÃO/
   │   └── [ANO]/
   │       └── [CODIGO_CONDOMINIO]/
-  │           └── [nome_arquivo].pdf
-  ├── SEGUROS/
-  │   └── [ANO]/
-  │       └── [CODIGO_CONDOMINIO]/
-  │           └── [nome_arquivo].pdf
-  ├── AVCB/
-  │   └── [ANO]/
-  │       └── [CODIGO_CONDOMINIO]/
-  ├── SPDA/
-  │   └── [ANO]/
-  │       └── [CODIGO_CONDOMINIO]/
-  └── IMAGENS/
+  │           └── [timestamp]_[nome_arquivo].pdf
+  └── SEGUROS/
+      └── [ANO]/
+          └── [CODIGO_CONDOMINIO]/
+              └── [timestamp]_[nome_arquivo].pdf
   ```
-- Consulte o guia completo de configuração do Microsoft Entra ID em [`docs/ONEDRIVE_SETUP.md`](docs/ONEDRIVE_SETUP.md).
-- Em ambiente de desenvolvimento offline, o sistema possui **fallback local automático**.
+- Se `NUVEM_DIR` não for configurado ou não estiver acessível, o sistema salva automaticamente em `server/data/uploads/` com aviso no log do servidor.
 
 ---
 
@@ -125,12 +117,8 @@ PORT=4000
 # Diretório do Banco de Dados SQLite (OBRIGATÓRIO ser em disco local, FORA do OneDrive)
 DB_DIR=C:\controle-periodicos-data
 
-# Integração Microsoft Graph API (OneDrive Corporativo)
-MICROSOFT_TENANT_ID=00000000-0000-0000-0000-000000000000
-MICROSOFT_CLIENT_ID=11111111-1111-1111-1111-111111111111
-MICROSOFT_CLIENT_SECRET=sua_chave_secreta_aqui
-ONEDRIVE_USER_ID=leandro@imcosta.com.br
-ONEDRIVE_ROOT_FOLDER=CONDOMÍNIOS
+# Diretório raiz para upload e organização de PDFs (pode ser OneDrive / Rede)
+NUVEM_DIR=C:\Users\Administrador\OneDrive - IMCosta Administradora\CONDOMÍNIOS
 
 # Chave secreta para assinatura dos tokens JWT de autenticação
 JWT_SECRET=sua_chave_secreta_longa_e_aleatoria_aqui_gerada_em_producao
