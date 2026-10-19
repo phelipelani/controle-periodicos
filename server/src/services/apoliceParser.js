@@ -535,6 +535,55 @@ function extrairDadosCondominio(texto, secaoCondominio = '') {
   };
 }
 
+/**
+ * Extrai Prêmio Líquido e Prêmio Total da apólice
+ */
+function extrairPremios(texto) {
+  let premioLiquido = null;
+  let premioTotal = null;
+
+  // Regex para Prêmio Líquido
+  const regexesLiquido = [
+    /Pr[eê]mio\s*L[ií]quido\s*(?:Total)?\s*[:.]?\s*R?\$?\s*([\d]{1,3}(?:\.[\d]{3})*,\d{2})/i,
+    /Pr[eê]mio\s*L[ií]quido\s*\([^)]+\)\s*[:.]?\s*R?\$?\s*([\d]{1,3}(?:\.[\d]{3})*,\d{2})/i,
+    /Pr[eê]mio\s*Tarif[aá]rio\s*[:.]?\s*R?\$?\s*([\d]{1,3}(?:\.[\d]{3})*,\d{2})/i,
+    /Valor\s*L[ií]quido\s*[:.]?\s*R?\$?\s*([\d]{1,3}(?:\.[\d]{3})*,\d{2})/i,
+    /L[IÍ]QUIDO\s*[:.]?\s*R?\$?\s*([\d]{1,3}(?:\.[\d]{3})*,\d{2})/i
+  ];
+
+  for (const reg of regexesLiquido) {
+    const match = texto.match(reg);
+    if (match && match[1]) {
+      const val = parseMoedaBR(match[1]);
+      if (val && val > 0 && val < 500000) {
+        premioLiquido = val;
+        break;
+      }
+    }
+  }
+
+  // Regex para Prêmio Total
+  const regexesTotal = [
+    /Pr[eê]mio\s*Total\s*(?:a\s*Pagar)?\s*[:.]?\s*R?\$?\s*([\d]{1,3}(?:\.[\d]{3})*,\d{2})/i,
+    /Valor\s*Total\s*(?:a\s*Pagar)?\s*[:.]?\s*R?\$?\s*([\d]{1,3}(?:\.[\d]{3})*,\d{2})/i,
+    /Custo\s*Efetivo\s*Total\s*[:.]?\s*R?\$?\s*([\d]{1,3}(?:\.[\d]{3})*,\d{2})/i,
+    /TOTAL\s*A\s*PAGAR\s*[:.]?\s*R?\$?\s*([\d]{1,3}(?:\.[\d]{3})*,\d{2})/i
+  ];
+
+  for (const reg of regexesTotal) {
+    const match = texto.match(reg);
+    if (match && match[1]) {
+      const val = parseMoedaBR(match[1]);
+      if (val && val > 0 && val < 500000) {
+        premioTotal = val;
+        break;
+      }
+    }
+  }
+
+  return { premioLiquido, premioTotal };
+}
+
 const COBERTURAS_CATALOGO = [
   { chave: 'basica_simples', nome: 'Básica Simples (Incêndio)', regex: /B[aá]sica\s*Simples|Inc[eê]ndio\s*,\s*Queda|Inc\.?\s*\/\s*Raio\s*\/\s*Explosao/i, franquiaRegex: /Inc[eê]ndio|Queda\s*de\s*Raio/i },
   { chave: 'danos_eletricos', nome: 'Danos Elétricos', regex: /Danos\s*El[eé]tricos/i, franquiaRegex: /Danos\s*El[eé]tricos/i },
@@ -841,6 +890,7 @@ async function extrairDadosApolicePDF(pdfBuffer) {
     const valorDeNovo = extrairValorDeNovo(secaoSeguro || texto);
     const dadosCond = extrairDadosCondominio(texto, secaoCondominio);
     const coberturas = extrairCoberturas(texto, lmg);
+    const { premioLiquido, premioTotal } = extrairPremios(texto);
 
     return {
       sucesso: true,
@@ -856,6 +906,8 @@ async function extrairDadosApolicePDF(pdfBuffer) {
       valor_de_novo: valorDeNovo,
       vigencia_inicio: vigencia.inicio || null,
       vigencia_fim: vigencia.fim || null,
+      premio_liquido: premioLiquido || null,
+      premio_total: premioTotal || null,
       idade_condominio: idade,
       quantidade_andares: andares,
       quantidade_elevadores: elevadores.quantidade,
@@ -885,6 +937,7 @@ async function extrairDadosApolicePDF(pdfBuffer) {
 
 module.exports = {
   extrairDadosApolicePDF,
+  extrairPremios,
   identificarSeguradora,
   identificarCorretora,
   extrairNumeroApolice,

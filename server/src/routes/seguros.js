@@ -78,6 +78,7 @@ const storageSeguros = multer.diskStorage({
 const uploadSeguros = multer({ storage: storageSeguros, limits: { fileSize: 25 * 1024 * 1024 } });
 const uploadMemoria = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
 const { extrairDadosApolicePDF } = require('../services/apoliceParser');
+const { reprocessarTodasApolices } = require('../services/reprocessarPremios');
 
 // ============================================================
 // 0. POST /api/seguros/extrair-pdf - Leitura e parsing de apólice em PDF
@@ -93,6 +94,19 @@ router.post('/extrair-pdf', uploadMemoria.single('apolice_pdf'), async (req, res
   } catch (err) {
     console.error('[POST /extrair-pdf] Erro ao processar:', err);
     res.status(500).json({ erro: err.message || 'Erro ao extrair informações da apólice.' });
+  }
+});
+
+// ============================================================
+// 0.1. POST /api/seguros/reprocessar-premios - Varre e extrai prêmio líquido de todas apólices
+// ============================================================
+router.post('/reprocessar-premios', async (req, res) => {
+  try {
+    const resultado = await reprocessarTodasApolices();
+    res.json({ ok: true, ...resultado });
+  } catch (err) {
+    console.error('[POST /reprocessar-premios] Erro:', err);
+    res.status(500).json({ erro: err.message || 'Erro ao reprocessar apólices.' });
   }
 });
 
@@ -126,6 +140,8 @@ router.get('/', (req, res) => {
         s.numero_apolice,
         s.data_renovacao,
         s.data_validade,
+        s.premio_liquido,
+        s.premio_total,
         s.status AS seguro_status_db,
         s.observacoes,
         s.atualizado_em,
@@ -204,6 +220,9 @@ router.get('/', (req, res) => {
       numeroApolice: c.numero_apolice || '—',
       dataRenovacao: c.data_renovacao || null,
       dataValidade: c.data_validade || null,
+      premioLiquido: c.premio_liquido != null ? c.premio_liquido : null,
+      premio_liquido: c.premio_liquido != null ? c.premio_liquido : null,
+      premioTotal: c.premio_total != null ? c.premio_total : null,
       status,
       diasRestantes,
       observacoes: c.observacoes || '',
@@ -222,6 +241,9 @@ router.get('/', (req, res) => {
   const vencidos = lista.filter((s) => s.status === 'vencido').length;
   const semRegistro = lista.filter((s) => s.status === 'sem_registro').length;
 
+  const totalPremioLiquido = lista.reduce((acc, curr) => acc + (Number(curr.premioLiquido) || 0), 0);
+  const qtdComPremio = lista.filter((s) => s.premioLiquido != null && Number(s.premioLiquido) > 0).length;
+
   const percentualAtivos = total > 0 ? ((ativos / total) * 100).toFixed(1).replace('.', ',') : '0,0';
 
   const kpis = {
@@ -230,7 +252,9 @@ router.get('/', (req, res) => {
     percentualAtivos: `${percentualAtivos}% dos condomínios`,
     proximosVencer: aVencer,
     segurosVencidos: vencidos,
-    semRegistro
+    semRegistro,
+    totalPremioLiquido,
+    qtdComPremio
   };
 
   res.json({
@@ -372,6 +396,10 @@ router.get('/:condominioId', (req, res) => {
           vigenciaInicio: seguro.vigencia_inicio || seguro.data_renovacao || null,
           vigenciaFim: seguro.vigencia_fim || seguro.data_validade || null,
           coberturaPorUnidade: seguro.cobertura_por_unidade || 300000,
+          premioLiquido: seguro.premio_liquido != null ? seguro.premio_liquido : null,
+          premio_liquido: seguro.premio_liquido != null ? seguro.premio_liquido : null,
+          premioTotal: seguro.premio_total != null ? seguro.premio_total : null,
+          premio_total: seguro.premio_total != null ? seguro.premio_total : null,
           status,
           diasRestantes,
           observacoes: seguro.observacoes || '',
@@ -401,6 +429,10 @@ router.get('/:condominioId', (req, res) => {
           vigenciaInicio: null,
           vigenciaFim: null,
           coberturaPorUnidade: 300000,
+          premioLiquido: null,
+          premio_liquido: null,
+          premioTotal: null,
+          premio_total: null,
           status: 'sem_registro',
           diasRestantes: null,
           observacoes: '',
@@ -542,8 +574,15 @@ router.post('/', (req, res) => {
       vigencia_inicio,
       vigencia_fim,
       cobertura_por_unidade,
+      premio_liquido,
+      premioLiquido,
+      premio_total,
+      premioTotal,
       observacoes
     } = apolice_dados;
+
+    const valPremioLiquido = premio_liquido !== undefined ? (premio_liquido !== '' && premio_liquido !== null ? Number(premio_liquido) : null) : (premioLiquido !== undefined ? (premioLiquido !== '' && premioLiquido !== null ? Number(premioLiquido) : null) : undefined);
+    const valPremioTotal = premio_total !== undefined ? (premio_total !== '' && premio_total !== null ? Number(premio_total) : null) : (premioTotal !== undefined ? (premioTotal !== '' && premioTotal !== null ? Number(premioTotal) : null) : undefined);
 
     const dtValidadeFinal = data_validade || vigencia_fim;
     const { status: statusCalculado } = calcularStatusSeguro(dtValidadeFinal);
@@ -558,15 +597,17 @@ router.post('/', (req, res) => {
         { key: 'numero_apolice', label: 'Nº da apólice', val: numero_apolice },
         { key: 'data_renovacao', label: 'Data de renovação', val: data_renovacao },
         { key: 'data_validade', label: 'Data de validade', val: dtValidadeFinal },
-        { key: 'cobertura_por_unidade', label: 'Cobertura por unidade', val: cobertura_por_unidade }
+        { key: 'cobertura_por_unidade', label: 'Cobertura por unidade', val: cobertura_por_unidade },
+        { key: 'premio_liquido', label: 'Prêmio Líquido', val: valPremioLiquido },
+        { key: 'premio_total', label: 'Prêmio Total', val: valPremioTotal }
       ];
 
       for (const item of camposApolice) {
         if (item.val !== undefined && String(item.val || '') !== String(seguroAtual[item.key] || '')) {
           alteracoesAuditoria.push({
             campo: item.label,
-            anterior: seguroAtual[item.key] || '—',
-            novo: item.val || '—'
+            anterior: seguroAtual[item.key] != null ? seguroAtual[item.key] : '—',
+            novo: item.val != null ? item.val : '—'
           });
         }
       }
@@ -594,6 +635,8 @@ router.post('/', (req, res) => {
             vigencia_inicio = ?,
             vigencia_fim = ?,
             cobertura_por_unidade = ?,
+            premio_liquido = ?,
+            premio_total = ?,
             status = ?,
             observacoes = ?,
             atualizado_em = datetime('now'),
@@ -621,6 +664,8 @@ router.post('/', (req, res) => {
         vigencia_inicio || data_renovacao || null,
         vigencia_fim || dtValidadeFinal || null,
         cobertura_por_unidade != null ? Number(cobertura_por_unidade) : null,
+        valPremioLiquido !== undefined ? valPremioLiquido : (seguroAtual.premio_liquido || null),
+        valPremioTotal !== undefined ? valPremioTotal : (seguroAtual.premio_total || null),
         statusCalculado,
         observacoes || null,
         req.usuario.id,
@@ -635,8 +680,8 @@ router.post('/', (req, res) => {
           quantidade_blocos, categoria_risco, tipo_seguro, produto_ramo,
           modalidade, condicoes_gerais, limite_maximo_garantia,
           versao_tabela, valor_de_novo, vigencia_inicio, vigencia_fim,
-          cobertura_por_unidade, status, observacoes, criado_em, atualizado_em, atualizado_por
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), ?)
+          cobertura_por_unidade, premio_liquido, premio_total, status, observacoes, criado_em, atualizado_em, atualizado_por
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), ?)
       `).run(
         condId,
         seguradora || null,
@@ -660,6 +705,8 @@ router.post('/', (req, res) => {
         vigencia_inicio || data_renovacao || null,
         vigencia_fim || dtValidadeFinal || null,
         cobertura_por_unidade != null ? Number(cobertura_por_unidade) : null,
+        valPremioLiquido !== undefined ? valPremioLiquido : null,
+        valPremioTotal !== undefined ? valPremioTotal : null,
         statusCalculado,
         observacoes || null,
         req.usuario.id

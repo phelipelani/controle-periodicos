@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
 
@@ -232,7 +233,9 @@ function migrate() {
     'ALTER TABLE seguros ADD COLUMN valor_de_novo INTEGER DEFAULT 1',
     'ALTER TABLE seguros ADD COLUMN vigencia_inicio TEXT',
     'ALTER TABLE seguros ADD COLUMN vigencia_fim TEXT',
-    'ALTER TABLE seguros ADD COLUMN cobertura_por_unidade REAL'
+    'ALTER TABLE seguros ADD COLUMN cobertura_por_unidade REAL',
+    'ALTER TABLE seguros ADD COLUMN premio_liquido REAL',
+    'ALTER TABLE seguros ADD COLUMN premio_total REAL'
   ];
   for (const sql of colunasSeguros) {
     try {
@@ -267,6 +270,15 @@ function migrate() {
   } catch (e) {
     // Ignore if column already exists
   }
+
+  // Add servico_executado to condominio_servicos and historico (ex: Dedetização, Descupinização)
+  try {
+    db.exec('ALTER TABLE condominio_servicos ADD COLUMN servico_executado TEXT');
+  } catch (e) {}
+
+  try {
+    db.exec('ALTER TABLE historico ADD COLUMN servico_executado TEXT');
+  } catch (e) {}
 
   // Tabela de Auditoria / Histórico de Mudanças
   db.exec(`

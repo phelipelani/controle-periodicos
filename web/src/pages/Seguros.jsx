@@ -9,6 +9,7 @@ import SegurosFilters from '../components/seguros/SegurosFilters';
 import SegurosTable from '../components/seguros/SegurosTable';
 import SeguroFichaDrawer from '../components/seguros/SeguroFichaDrawer';
 import SeguroNovoEditarDrawer from '../components/seguros/SeguroNovoEditarDrawer';
+import TabelaPremiosModal from '../components/seguros/TabelaPremiosModal';
 
 const initialFiltros = {
   busca: '',
@@ -38,10 +39,11 @@ export default function Seguros() {
   const [colunaOrdenacao, setColunaOrdenacao] = useState('codigo');
   const [ordemDirecao, setOrdemDirecao] = useState('asc');
 
-  // Drawers
+  // Drawers & Modais
   const [fichaCondominioId, setFichaCondominioId] = useState(null);
   const [drawerNovoEditarAberto, setDrawerNovoEditarAberto] = useState(false);
   const [seguroEditando, setSeguroEditando] = useState(null);
+  const [modalPremiosAberto, setModalPremiosAberto] = useState(false);
 
   const podeEditarCadastrais = isAdmin || usuario?.papel === 'gerente';
 
@@ -284,6 +286,12 @@ export default function Seguros() {
           : b.corretora.localeCompare(a.corretora);
       }
 
+      if (colunaOrdenacao === 'premioLiquido') {
+        const valA = Number(a.premioLiquido ?? a.premio_liquido) || 0;
+        const valB = Number(b.premioLiquido ?? b.premio_liquido) || 0;
+        return ordemDirecao === 'asc' ? valA - valB : valB - valA;
+      }
+
       if (colunaOrdenacao === 'validade') {
         const valA = a.dataValidade || '';
         const valB = b.dataValidade || '';
@@ -322,9 +330,34 @@ export default function Seguros() {
             </div>
           </div>
 
-          <button type="button" className="seg-btn-primary" onClick={handleNovo}>
-            + Novo seguro
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              className="seg-btn-secondary"
+              onClick={() => setModalPremiosAberto(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 600,
+                fontSize: '13px',
+                padding: '9px 16px',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                color: 'var(--text-primary)'
+              }}
+              title="Visualizar e exportar tabela com o prêmio líquido de todos os seguros"
+            >
+              <span style={{ fontSize: '15px' }}>💰</span> Tabela de Prêmios Líquidos
+            </button>
+
+            <button type="button" className="seg-btn-primary" onClick={handleNovo}>
+              + Novo seguro
+            </button>
+          </div>
         </div>
 
         {erro && (
@@ -399,6 +432,17 @@ export default function Seguros() {
         gerentes={gerentes}
         onSalvar={handleSalvar}
         podeEditarCadastrais={podeEditarCadastrais}
+      />
+
+      {/* Modal Tabela de Prêmios Líquidos para Gestão/Diretoria */}
+      <TabelaPremiosModal
+        aberto={modalPremiosAberto}
+        onFechar={() => setModalPremiosAberto(false)}
+        seguros={seguros}
+        seguradoras={seguradoras}
+        corretoras={corretoras}
+        gerentes={gerentes}
+        onRecarregar={carregarDados}
       />
 
       {/* Toast Feedback */}

@@ -145,20 +145,20 @@ const UploadDocumento = ({ onFileUploaded, initialPath, codigoCondominio, ano })
   );
 };
 
-export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, rowData, onSaved, todosCondominios, servicoId }) {
+export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, rowData, onSaved, onAbrirComunicado, todosCondominios, servicoId }) {
   const { usuario } = useAuth();
   const isEmpresa = usuario?.papel === 'empresa';
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false);
+  const [criandoNovoCiclo, setCriandoNovoCiclo] = useState(false);
 
   // Aba ativa: 'agendamento' | 'execucao'
   const [abaAtiva, setAbaAtiva] = useState('agendamento');
 
   const DEFAULT_TIPOS = [
-    { nome: 'Apartamento Padrão', valor: 80 },
-    { nome: 'Cobertura / Duplex', valor: 130 },
-    { nome: 'Loja / Comercial', valor: 160 }
+    { nome: 'Dedetização (aptos tipo)', valor: 85 },
+    { nome: 'Dedetização (aptos cobertura)', valor: 140 }
   ];
   const DEFAULT_ORIENTACOES = `MÉTODOS DE APLICAÇÃO E CUIDADOS:
 • PULVERIZAÇÃO (Garantia 6 meses): Ausência do local durante a aplicação e manter fechado por 2h. Alérgicos, respiratórios, crianças, lactentes e pets: ausência de no mínimo 48h. Limpeza após 96h. Arejar antes de usar. Cobrir utensílios expostos.
@@ -178,6 +178,7 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
   // Estados Execução
   const [empresaExecucao, setEmpresaExecucao] = useState('');
   const [dataExecucao, setDataExecucao] = useState('');
+  const [servicoExecutado, setServicoExecutado] = useState('Dedetização');
   const [unidadesObs, setUnidadesObs] = useState('');
   const [anexoPath, setAnexoPath] = useState(null);
 
@@ -185,6 +186,7 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
     if (open) {
       setErro('');
       setConfirmandoCancelamento(false);
+      setCriandoNovoCiclo(false);
 
       if (mode === 'novo') {
         setCondominioId(rowData ? rowData.id : '');
@@ -200,7 +202,7 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
         // Inicialização para condomínio existente
         if (initialTab) {
           setAbaAtiva(initialTab);
-        } else if (rowData?.agendamento_id || rowData?.status === 'Agendado') {
+        } else if (rowData?.status === 'Agendado') {
           setAbaAtiva('agendamento');
         } else {
           setAbaAtiva('execucao');
@@ -232,6 +234,7 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
         const hoje = new Date().toISOString().split('T')[0];
         setDataExecucao(rowData?.raw_data_execucao || hoje);
         setEmpresaExecucao(rowData?.empresa && rowData.empresa !== '-' ? rowData.empresa : (rowData?.agendamento_empresa || ''));
+        setServicoExecutado(rowData?.servicoExecutado || rowData?.servico_executado || 'Dedetização');
         setUnidadesObs(rowData?.observacao || '');
         setAnexoPath(rowData?.path || null);
       }
@@ -258,6 +261,26 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
     }
   };
 
+  const aplicarPresetTipos = (qtd) => {
+    const v1 = tiposUnidades[0]?.valor || 85;
+    const v2 = tiposUnidades[1]?.valor || 140;
+    const v3 = tiposUnidades[2]?.valor || 160;
+    if (qtd === 1) {
+      setTiposUnidades([{ nome: 'Dedetização (aptos tipo)', valor: v1 }]);
+    } else if (qtd === 2) {
+      setTiposUnidades([
+        { nome: 'Dedetização (aptos tipo)', valor: v1 },
+        { nome: 'Dedetização (aptos cobertura)', valor: v2 }
+      ]);
+    } else if (qtd === 3) {
+      setTiposUnidades([
+        { nome: 'Dedetização (aptos tipo)', valor: v1 },
+        { nome: 'Dedetização (aptos cobertura)', valor: v2 },
+        { nome: 'Dedetização (lojas / comercial)', valor: v3 }
+      ]);
+    }
+  };
+
   // Salvar / Editar Agendamento
   const handleSalvarAgendamento = async () => {
     const targetCondominioId = mode === 'novo' ? condominioId : rowData?.id;
@@ -273,28 +296,38 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
     setSalvando(true);
     setErro('');
     try {
+      const tiposFiltrados = tiposUnidades.filter(t => t.nome && t.nome.trim());
       const payload = {
         data_agendada: dataAgendada,
         periodo: periodoAgendado,
         empresa: empresaAgendada ? empresaAgendada.trim().toUpperCase() : null,
         observacao: obsAgendamento || null,
         valor_area_comum: valorAreaComum !== '' ? Number(valorAreaComum) : 0,
-        tipos_unidades: JSON.stringify(tiposUnidades.filter(t => t.nome && t.nome.trim())),
+        tipos_unidades: JSON.stringify(tiposFiltrados),
         orientacoes: orientacoes || null
       };
 
-      if (rowData?.agendamento_id) {
-        // Atualiza agendamento existente
-        await api.put(`/agendamentos/${rowData.agendamento_id}`, payload);
+      let agSalvo;
+      if (rowData?.agendamento_id && !criandoNovoCiclo && mode !== 'novo') {
+        // Atualiza agendamento existente (inclusive se já foi realizado)
+        agSalvo = await api.put(`/agendamentos/${rowData.agendamento_id}`, payload);
       } else {
         // Cria novo agendamento
-        await api.post('/agendamentos', {
+        agSalvo = await api.post('/agendamentos', {
           condominio_id: targetCondominioId,
           servico_id: servicoId,
           ...payload
         });
       }
-      onSaved();
+
+      const condObj = todosCondominios?.find(c => String(c.id) === String(targetCondominioId));
+      const nomeCond = rowData?.condominio || condObj?.condominio || '';
+
+      onSaved({
+        ...agSalvo,
+        condominio_nome: nomeCond,
+        tipos_unidades: tiposFiltrados
+      });
     } catch (e) {
       setErro(e.message || 'Erro ao salvar agendamento');
     } finally {
@@ -338,6 +371,7 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
         data: dataExecucao,
         empresa: empresaFinal,
         observacao: unidadesObs || null,
+        servico_executado: servicoExecutado ? servicoExecutado.trim() : 'Dedetização',
         anexo: anexoPath
       });
 
@@ -444,17 +478,22 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
               </div>
 
               <div className="ded-form-group" style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '4px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '600' }}>Categorias de Unidades e Valores (Até 3)</label>
-                  {tiposUnidades.length < 3 && (
-                    <button 
-                      type="button" 
-                      onClick={handleAdicionarTipo}
-                      style={{ background: '#0284c7', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}
-                    >
-                      + Adicionar Categoria
-                    </button>
-                  )}
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                    <button type="button" onClick={() => aplicarPresetTipos(1)} style={{ background: tiposUnidades.length === 1 ? '#0284c7' : '#e2e8f0', color: tiposUnidades.length === 1 ? '#fff' : '#334155', border: 'none', borderRadius: '4px', padding: '2px 7px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>Só Apto</button>
+                    <button type="button" onClick={() => aplicarPresetTipos(2)} style={{ background: tiposUnidades.length === 2 ? '#0284c7' : '#e2e8f0', color: tiposUnidades.length === 2 ? '#fff' : '#334155', border: 'none', borderRadius: '4px', padding: '2px 7px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>Apto + Cob.</button>
+                    <button type="button" onClick={() => aplicarPresetTipos(3)} style={{ background: tiposUnidades.length === 3 ? '#0284c7' : '#e2e8f0', color: tiposUnidades.length === 3 ? '#fff' : '#334155', border: 'none', borderRadius: '4px', padding: '2px 7px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>Apto + Cob. + Loja</button>
+                    {tiposUnidades.length < 3 && (
+                      <button 
+                        type="button" 
+                        onClick={handleAdicionarTipo}
+                        style={{ background: '#0f172a', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '10px', fontWeight: '600', cursor: 'pointer' }}
+                      >
+                        + Add
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -531,10 +570,25 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
             {/* ABA 1: AGENDAMENTO */}
             {abaAtiva === 'agendamento' && (
               <div className="ded-form-section">
-                {rowData?.agendamento_id ? (
+                {rowData?.agendamento_id && !criandoNovoCiclo ? (
                   <div>
-                    <div style={{background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:'8px', padding:'12px', fontSize:'13px', color:'#1e40af', marginBottom:'10px'}}>
-                      <strong>📅 Agendamento Ativo:</strong> Visita marcada para <strong>{rowData.dataAgendada}</strong> ({rowData.periodoAgendado || 'Manhã'}).
+                    <div style={{background: rowData.agendamento_status === 'realizado' ? '#f0fdf4' : '#eff6ff', border: `1px solid ${rowData.agendamento_status === 'realizado' ? '#bbf7d0' : '#bfdbfe'}`, borderRadius:'8px', padding:'12px', fontSize:'13px', color: rowData.agendamento_status === 'realizado' ? '#166534' : '#1e40af', marginBottom:'10px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:'8px', flexWrap:'wrap'}}>
+                      <div>
+                        <strong>{rowData.agendamento_status === 'realizado' ? '✓ Agendamento Realizado (Editável):' : '📅 Agendamento Ativo:'}</strong> Visita de <strong>{rowData.dataAgendada}</strong> ({rowData.periodoAgendado || 'Manhã'}).
+                      </div>
+                      {rowData.agendamento_status === 'realizado' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCriandoNovoCiclo(true);
+                            setDataAgendada('');
+                            setObsAgendamento('');
+                          }}
+                          style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          + Agendar Nova Visita
+                        </button>
+                      )}
                     </div>
 
                     {rowData.token_adesao && (
@@ -552,7 +606,7 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
                             Abrir Página do Morador ↗
                           </a>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                           <input 
                             type="text" 
                             readOnly 
@@ -571,12 +625,42 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
                             Copiar Link
                           </button>
                         </div>
+                        {onAbrirComunicado && (
+                          <button
+                            type="button"
+                            onClick={() => onAbrirComunicado({
+                              ...rowData,
+                              condominio_nome: rowData.condominio,
+                              data_agendada: dataAgendada || rowData.raw_data_agendada,
+                              periodo: periodoAgendado || rowData.periodoAgendado,
+                              empresa: empresaAgendada || rowData.empresa,
+                              tipos_unidades: tiposUnidades
+                            })}
+                            style={{ width: '100%', background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: '6px', padding: '8px 12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                          >
+                            📄 Gerar Comunicado Oficial (Word / PDF / WhatsApp)
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div style={{background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:'8px', padding:'12px', fontSize:'13px', color:'#475569', marginBottom:'14px'}}>
-                    ℹ️ <strong>Nenhum agendamento pendente.</strong> Preencha os campos abaixo para marcar uma nova data.
+                  <div style={{background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:'8px', padding:'12px', fontSize:'13px', color:'#475569', marginBottom:'14px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                    <span>ℹ️ <strong>Novo agendamento de visita.</strong> Preencha os campos abaixo para marcar uma nova data.</span>
+                    {criandoNovoCiclo && rowData?.agendamento_id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCriandoNovoCiclo(false);
+                          const dataAgendadaRaw = rowData?.raw_data_agendada || (rowData?.dataAgendada && rowData.dataAgendada !== '-' ? rowData.dataAgendada.split('/').reverse().join('-') : '');
+                          setDataAgendada(dataAgendadaRaw);
+                          setObsAgendamento(rowData?.agendamento_observacao || '');
+                        }}
+                        style={{ background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Voltar ao anterior
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -641,17 +725,22 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
                   </div>
 
                   <div className="ded-form-group" style={{ marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '4px' }}>
                       <label style={{ fontSize: '12px', fontWeight: '600' }}>Categorias de Unidades e Valores (Até 3)</label>
-                      {tiposUnidades.length < 3 && (
-                        <button 
-                          type="button" 
-                          onClick={handleAdicionarTipo}
-                          style={{ background: '#0284c7', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}
-                        >
-                          + Adicionar Categoria
-                        </button>
-                      )}
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        <button type="button" onClick={() => aplicarPresetTipos(1)} style={{ background: tiposUnidades.length === 1 ? '#0284c7' : '#e2e8f0', color: tiposUnidades.length === 1 ? '#fff' : '#334155', border: 'none', borderRadius: '4px', padding: '2px 7px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>Só Apto</button>
+                        <button type="button" onClick={() => aplicarPresetTipos(2)} style={{ background: tiposUnidades.length === 2 ? '#0284c7' : '#e2e8f0', color: tiposUnidades.length === 2 ? '#fff' : '#334155', border: 'none', borderRadius: '4px', padding: '2px 7px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>Apto + Cob.</button>
+                        <button type="button" onClick={() => aplicarPresetTipos(3)} style={{ background: tiposUnidades.length === 3 ? '#0284c7' : '#e2e8f0', color: tiposUnidades.length === 3 ? '#fff' : '#334155', border: 'none', borderRadius: '4px', padding: '2px 7px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>Apto + Cob. + Loja</button>
+                        {tiposUnidades.length < 3 && (
+                          <button 
+                            type="button" 
+                            onClick={handleAdicionarTipo}
+                            style={{ background: '#0f172a', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '10px', fontWeight: '600', cursor: 'pointer' }}
+                          >
+                            + Add
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -783,15 +872,27 @@ export default function DedetizacaoDrawer({ open, onClose, mode, initialTab, row
                 </div>
 
                 <div className="ded-form-group">
-                  <label>Unidades atendidas / observações</label>
+                  <label>Serviço realizado</label>
+                  <input 
+                    type="text" 
+                    className="ded-input" 
+                    value={servicoExecutado} 
+                    onChange={e => setServicoExecutado(e.target.value)} 
+                    placeholder="Ex: Dedetização, Descupinização, Dedetização e Descupinização..." 
+                  />
+                  <div style={{fontSize:'11px', color:'#64748b'}}>Informe o tipo de serviço (ex: Dedetização, Descupinização).</div>
+                </div>
+
+                <div className="ded-form-group">
+                  <label>Unidades atendidas / Observações</label>
                   <textarea 
                     className="ded-textarea" 
                     value={unidadesObs} 
                     onChange={e => setUnidadesObs(e.target.value)} 
                     disabled={isEmpresa && !!rowData?.observacao}
-                    placeholder="Ex: Aptos 101, 102, 203, áreas comuns dedetizadas..."
+                    placeholder="Ex: 45 apartamentos atendidos, áreas comuns, aptos 101, 102..."
                   />
-                  <div style={{fontSize:'11px', color:'#64748b'}}>Informe as unidades atendidas e notas sobre a execução do serviço.</div>
+                  <div style={{fontSize:'11px', color:'#64748b'}}>Informe a quantidade de apartamentos, unidades atendidas e observações gerais.</div>
                 </div>
 
                 <UploadDocumento 

@@ -12,6 +12,7 @@ import DedetizacaoTable from '../components/dedetizacao/DedetizacaoTable';
 import DedetizacaoDrawer from '../components/dedetizacao/DedetizacaoDrawer';
 import DedetizacaoModalVisualizar from '../components/dedetizacao/DedetizacaoModalVisualizar';
 import AgendamentoAdesoesDrawer from '../components/agendamentos/AgendamentoAdesoesDrawer';
+import ComunicadoDedetizacaoModal from '../components/dedetizacao/ComunicadoDedetizacaoModal';
 
 export default function Dedetizacao() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -20,6 +21,7 @@ export default function Dedetizacao() {
   const [activeRow, setActiveRow] = useState(null);
   const [itemVisualizando, setItemVisualizando] = useState(null);
   const [itemAdesoes, setItemAdesoes] = useState(null);
+  const [itemComunicado, setItemComunicado] = useState(null);
   const [dadosBrutos, setDadosBrutos] = useState([]);
   const [usuariosEmpresas, setUsuariosEmpresas] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -73,11 +75,15 @@ export default function Dedetizacao() {
             agendamento_observacao: r.agendamento_observacao || '',
             historico_id: r.historico_id,
             observacao: r.observacoes || '',
+            servicoExecutado: r.servico_executado || '',
+            servico_executado: r.servico_executado || '',
             token_adesao: r.token_adesao || null,
             valor_area_comum: r.valor_area_comum ?? 0,
             tipos_unidades: r.tipos_unidades || null,
             orientacoes: r.orientacoes || null,
             total_adesoes: r.total_adesoes || 0,
+            adesoes: r.adesoes || [],
+            agendamento_status: r.agendamento_status || null,
             // also keep raw dates for filtering
             raw_data_execucao: r.data_execucao
           };
@@ -291,9 +297,40 @@ export default function Dedetizacao() {
     }
   };
 
-  const onSaved = () => {
+  const onSaved = (agSalvo) => {
     setDrawerOpen(false);
     carregarDados();
+    if (agSalvo && agSalvo.data_agendada) {
+      setItemComunicado(agSalvo);
+    }
+  };
+
+  const abrirAdesoes = (row, agOverride) => {
+    setItemAdesoes({
+      id: agOverride?.id || row.agendamento_id || 0,
+      condominio_id: row.condominio_id || row.id,
+      condominio_nome: row.condominio,
+      data_agendada: agOverride?.data_agendada || row.raw_data_agendada || row.raw_data_execucao || '',
+      periodo: agOverride?.periodo || row.periodoAgendado || 'Manhã',
+      empresa: agOverride?.empresa || (row.empresa && row.empresa !== '-' ? row.empresa : ''),
+      token_adesao: agOverride?.token_adesao || row.token_adesao,
+      valor_area_comum: agOverride?.valor_area_comum ?? row.valor_area_comum,
+      tipos_unidades: agOverride?.tipos_unidades || row.tipos_unidades,
+      orientacoes: agOverride?.orientacoes || row.orientacoes
+    });
+  };
+
+  const abrirComunicadoDaLinha = (row) => {
+    setItemComunicado({
+      id: row.agendamento_id || 0,
+      condominio_id: row.condominio_id || row.id,
+      condominio_nome: row.condominio,
+      data_agendada: row.raw_data_agendada || row.raw_data_execucao || '',
+      periodo: row.periodoAgendado || 'Manhã',
+      empresa: row.empresa && row.empresa !== '-' ? row.empresa : (row.agendamento_empresa || 'DDDRIN'),
+      token_adesao: row.token_adesao,
+      tipos_unidades: row.tipos_unidades
+    });
   };
 
   return (
@@ -316,17 +353,8 @@ export default function Dedetizacao() {
               data={dadosOrdenados} 
               onEdit={handleEdit} 
               onVisualizar={(row) => setItemVisualizando(row)}
-              onVerAdesoes={(row) => setItemAdesoes({
-                id: row.agendamento_id,
-                condominio_nome: row.condominio,
-                data_agendada: row.raw_data_agendada,
-                periodo: row.periodoAgendado,
-                empresa: row.empresa,
-                token_adesao: row.token_adesao,
-                valor_area_comum: row.valor_area_comum,
-                tipos_unidades: row.tipos_unidades,
-                orientacoes: row.orientacoes
-              })}
+              onVerAdesoes={(row) => abrirAdesoes(row)}
+              onGerarComunicado={(row) => abrirComunicadoDaLinha(row)}
               colunaOrdenacao={colunaOrdenacao}
               ordemDirecao={ordemDirecao}
               onOrdenar={handleOrdenar}
@@ -343,6 +371,10 @@ export default function Dedetizacao() {
         initialTab={drawerTab}
         rowData={activeRow}
         onSaved={onSaved}
+        onAbrirComunicado={(ag) => {
+          setDrawerOpen(false);
+          setItemComunicado(ag);
+        }}
         todosCondominios={dadosBrutos}
         servicoId={servicoId}
       />
@@ -352,6 +384,7 @@ export default function Dedetizacao() {
           item={itemVisualizando}
           onFechar={() => setItemVisualizando(null)}
           onReciboExcluido={carregarDados}
+          onGerenciarAdesoes={abrirAdesoes}
         />
       )}
 
@@ -361,6 +394,17 @@ export default function Dedetizacao() {
           onClose={() => setItemAdesoes(null)}
           agendamento={itemAdesoes}
           onAtualizar={carregarDados}
+          onAbrirComunicado={(ag) => {
+            setItemAdesoes(null);
+            setItemComunicado(ag);
+          }}
+        />
+      )}
+
+      {itemComunicado && (
+        <ComunicadoDedetizacaoModal
+          agendamento={itemComunicado}
+          onFechar={() => setItemComunicado(null)}
         />
       )}
     </div>

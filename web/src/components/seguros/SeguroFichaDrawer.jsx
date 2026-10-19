@@ -449,15 +449,29 @@ export default function SeguroFichaDrawer({
                       <label>Versão da tabela:</label>
                       <span>{apolice.versaoTabela || '34'}</span>
                     </div>
+                    <div className="seg-card-item">
+                      <label>Contratação a valor de novo?</label>
+                      <span style={{ color: 'var(--success)' }}>{apolice.valorDeNovo ? 'Sim' : 'Não'}</span>
+                    </div>
+                    <div className="seg-card-item" style={{ background: 'var(--bg-surface-elevated)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                      <label style={{ color: 'var(--primary)', fontWeight: 700 }}>💰 Prêmio Líquido (Valor Pago):</label>
+                      <span style={{ fontSize: '15px', fontWeight: 700, color: apolice.premioLiquido != null ? 'var(--primary)' : 'var(--text-muted)' }}>
+                        {apolice.premioLiquido != null ? formatarMoeda(apolice.premioLiquido) : (apolice.premio_liquido != null ? formatarMoeda(apolice.premio_liquido) : 'Não informado')}
+                      </span>
+                    </div>
+                    {apolice.premioTotal != null && (
+                      <div className="seg-card-item" style={{ background: 'var(--bg-surface-elevated)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <label>Prêmio Total (com IOF):</label>
+                        <span style={{ fontSize: '14px', fontWeight: 600 }}>
+                          {formatarMoeda(apolice.premioTotal)}
+                        </span>
+                      </div>
+                    )}
                     <div className="seg-card-item" style={{ gridColumn: 'span 2' }}>
                       <label>Vigência da apólice:</label>
                       <span style={{ color: apolice.status === 'vencido' ? 'var(--danger)' : 'var(--text-primary)' }}>
                         {formatarData(apolice.vigenciaInicio || '2025-06-05')} até {formatarData(apolice.vigenciaFim || '2026-06-05')}
                       </span>
-                    </div>
-                    <div className="seg-card-item">
-                      <label>Contratação a valor de novo?</label>
-                      <span style={{ color: 'var(--success)' }}>{apolice.valorDeNovo ? 'Sim' : 'Não'}</span>
                     </div>
                     {apolice.observacoes && (
                       <div className="seg-card-item" style={{ gridColumn: 'span 2' }}>

@@ -23,6 +23,13 @@ function formatarData(dataStr) {
   return dataStr;
 }
 
+function formatarMoeda(val) {
+  if (val == null || val === '') return '—';
+  const num = Number(val);
+  if (isNaN(num)) return '—';
+  return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
 function renderBadge(status) {
   switch (status) {
     case 'ativo':
@@ -76,7 +83,7 @@ export default function SegurosTable({
     return ordemDirecao === 'asc' ? <IcoSortAsc /> : <IcoSortDesc />;
   };
 
-  const colSpanCount = drawerAberto ? 7 : 9;
+  const colSpanCount = drawerAberto ? 8 : 10;
 
   return (
     <div className="seg-table-card">
@@ -99,6 +106,9 @@ export default function SegurosTable({
                 </th>
               )}
               {!drawerAberto && <th>Gerente</th>}
+              <th className="sortable" onClick={() => onOrdenar('premioLiquido')}>
+                Prêmio Líquido {renderSortIcon('premioLiquido')}
+              </th>
               <th>Data renovação</th>
               <th className="sortable" onClick={() => onOrdenar('validade')}>
                 Data validade {renderSortIcon('validade')}
@@ -134,6 +144,11 @@ export default function SegurosTable({
                   <td>{item.seguradora}</td>
                   {!drawerAberto && <td>{item.corretora}</td>}
                   {!drawerAberto && <td>{item.gerente}</td>}
+                  <td>
+                    <span style={{ fontWeight: item.premioLiquido != null ? 600 : 400, color: item.premioLiquido != null ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                      {formatarMoeda(item.premioLiquido ?? item.premio_liquido)}
+                    </span>
+                  </td>
                   <td>{formatarData(item.dataRenovacao)}</td>
                   <td>
                     <span style={{ fontWeight: 600 }}>{formatarData(item.dataValidade)}</span>

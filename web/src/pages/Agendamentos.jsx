@@ -5,6 +5,7 @@ import Modal from '../components/Modal';
 import { formatarData } from '../components/format';
 import { IcoDoc, IcoEye, IcoCheck, IcoAlertTriangle, IcoTrash } from '../components/icons';
 import AgendamentoAdesoesDrawer from '../components/agendamentos/AgendamentoAdesoesDrawer';
+import ComunicadoDedetizacaoModal from '../components/dedetizacao/ComunicadoDedetizacaoModal';
 
 const ROTULO_AG = { agendado: 'Agendado', realizado: 'Realizado', cancelado: 'Cancelado' };
 const CLASSE_AG = { agendado: 'a_vencer', realizado: 'em_dia', cancelado: 'sem_registro' };
@@ -22,6 +23,7 @@ export default function Agendamentos() {
   const [anexandoRecibo, setAnexandoRecibo] = useState(null); // objeto agendamento para subir recibo
   const [visualizandoRecibo, setVisualizandoRecibo] = useState(null);
   const [adesoesAgendamento, setAdesoesAgendamento] = useState(null);
+  const [comunicadoAgendamento, setComunicadoAgendamento] = useState(null);
 
   function carregar() {
     const q = filtro ? `?status=${filtro}` : '';
@@ -38,12 +40,18 @@ export default function Agendamentos() {
   async function salvar(dados) {
     try {
       setErro('');
-      if (dados.id) await api.put(`/agendamentos/${dados.id}`, dados);
-      else await api.post('/agendamentos', dados);
+      const salvo = dados.id
+        ? await api.put(`/agendamentos/${dados.id}`, dados)
+        : await api.post('/agendamentos', dados);
       setForm(null);
-      setSucesso('Agendamento salvo com sucesso!');
+      setSucesso('Agendamento salvo com sucesso! Comunicado gerado automaticamente.');
       setTimeout(() => setSucesso(''), 4000);
       carregar();
+      const condObj = condominios.find(c => String(c.id) === String(dados.condominio_id));
+      setComunicadoAgendamento({
+        ...salvo,
+        condominio_nome: salvo?.condominio_nome || condObj?.nome || dados.condominio_nome || ''
+      });
     } catch (e) {
       setErro(e.message);
     }
@@ -278,7 +286,7 @@ export default function Agendamentos() {
                   </td>
                   <td style={{ color: 'var(--muted)', maxWidth: 220 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {a.status === 'agendado' && (
+                      {(a.status === 'agendado' || a.status === 'realizado') && (
                         <button
                           type="button"
                           style={{
@@ -295,7 +303,7 @@ export default function Agendamentos() {
                             gap: '4px'
                           }}
                           onClick={() => setAdesoesAgendamento(a)}
-                          title="Gerenciar adesões das unidades e copiar link do morador"
+                          title="Gerenciar adesões das unidades (adicionar/editar mesmo após execução)"
                         >
                           🏢 {a.total_adesoes || 0} {a.total_adesoes === 1 ? 'adesão' : 'adesões'} / Link
                         </button>
@@ -305,25 +313,47 @@ export default function Agendamentos() {
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div style={{ display: 'inline-flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                      {a.status === 'agendado' && passouData && (
+                        <button 
+                          className="primario" 
+                          style={{ background: '#16a34a', borderColor: '#16a34a', color: '#ffffff', fontWeight: 700, padding: '5px 10px', fontSize: '12px' }}
+                          onClick={() => setConfirmando(a)}
+                          title="Confirmar que o serviço foi realizado na data agendada"
+                        >
+                          ✓ Confirmar Realização
+                        </button>
+                      )}
+
+                      {(a.status === 'agendado' || a.status === 'realizado') && (
+                        <button
+                          type="button"
+                          style={{
+                            background: '#fff1f2',
+                            color: '#be123c',
+                            border: '1px solid #fecdd3',
+                            borderRadius: '6px',
+                            padding: '5px 10px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => setComunicadoAgendamento(a)}
+                          title="Gerar Comunicado Oficial para os Moradores (Word, PDF ou WhatsApp)"
+                        >
+                          📄 Comunicado
+                        </button>
+                      )}
+
+                      {(a.status === 'agendado' || a.status === 'realizado') && (
+                        <button className="secundario" style={{ padding: '5px 10px', fontSize: '12px' }} onClick={() => setForm(a)}>
+                          Editar
+                        </button>
+                      )}
+
                       {a.status === 'agendado' && (
-                        <>
-                          {passouData && (
-                            <button 
-                              className="primario" 
-                              style={{ background: '#16a34a', borderColor: '#16a34a', color: '#ffffff', fontWeight: 700, padding: '5px 10px', fontSize: '12px' }}
-                              onClick={() => setConfirmando(a)}
-                              title="Confirmar que o serviço foi realizado na data agendada"
-                            >
-                              ✓ Confirmar Realização
-                            </button>
-                          )}
-                          <button className="secundario" style={{ padding: '5px 10px', fontSize: '12px' }} onClick={() => setForm(a)}>
-                            Editar
-                          </button>
-                          <button className="perigo" style={{ padding: '5px 10px', fontSize: '12px' }} onClick={() => cancelar(a)}>
-                            Cancelar
-                          </button>
-                        </>
+                        <button className="perigo" style={{ padding: '5px 10px', fontSize: '12px' }} onClick={() => cancelar(a)}>
+                          Cancelar
+                        </button>
                       )}
 
                       {a.status === 'realizado' && !temRecibo && (
@@ -374,6 +404,20 @@ export default function Agendamentos() {
           onClose={() => setAdesoesAgendamento(null)}
           agendamento={adesoesAgendamento}
           onAtualizar={carregar}
+          onAbrirComunicado={(ag) => {
+            setAdesoesAgendamento(null);
+            setComunicadoAgendamento(ag);
+          }}
+        />
+      )}
+
+      {/* Modal Comunicado Oficial de Dedetização */}
+      {comunicadoAgendamento && (
+        <ComunicadoDedetizacaoModal
+          open={!!comunicadoAgendamento}
+          onClose={() => setComunicadoAgendamento(null)}
+          agendamento={comunicadoAgendamento}
+          condominioNome={comunicadoAgendamento.condominio_nome}
         />
       )}
 
@@ -431,9 +475,8 @@ function FormAgendamento({ agendamento, condominios, onSalvar, onFechar }) {
   const editando = !!agendamento.id;
   
   const DEFAULT_TIPOS = [
-    { nome: 'Apartamento Padrão', valor: 80 },
-    { nome: 'Cobertura / Duplex', valor: 130 },
-    { nome: 'Loja / Comercial', valor: 160 }
+    { nome: 'Dedetização (aptos tipo)', valor: 90 },
+    { nome: 'Dedetização (aptos cobertura)', valor: 150 }
   ];
   const DEFAULT_ORIENTACOES = '• Recomenda-se afastar animais de estimação, crianças, gestantes e idosos por no mínimo 4 horas após a aplicação.\n• Guardar alimentos, utensílios de cozinha e roupas descobertas.\n• Ventilar os cômodos ao retornar.';
 
@@ -452,7 +495,7 @@ function FormAgendamento({ agendamento, condominios, onSalvar, onFechar }) {
     condominio_id: agendamento.condominio_id || '',
     data_agendada: agendamento.data_agendada || '',
     periodo: agendamento.periodo || 'manha',
-    empresa: agendamento.empresa || '',
+    empresa: agendamento.empresa || 'DDDRIN',
     observacao: agendamento.observacao || '',
     valor_area_comum: agendamento.valor_area_comum !== undefined && agendamento.valor_area_comum !== null ? agendamento.valor_area_comum : '',
     tipos_unidades: parseTipos(),
@@ -484,6 +527,32 @@ function FormAgendamento({ agendamento, condominios, onSalvar, onFechar }) {
       setForm(prev => ({
         ...prev,
         tipos_unidades: prev.tipos_unidades.filter((_, i) => i !== idx)
+      }));
+    }
+  };
+
+  const aplicarPresetTipos = (preset) => {
+    if (preset === 'so_apto') {
+      setForm(prev => ({
+        ...prev,
+        tipos_unidades: [{ nome: 'Dedetização (aptos tipo)', valor: 90 }]
+      }));
+    } else if (preset === 'apto_cob') {
+      setForm(prev => ({
+        ...prev,
+        tipos_unidades: [
+          { nome: 'Dedetização (aptos tipo)', valor: 90 },
+          { nome: 'Dedetização (aptos cobertura)', valor: 150 }
+        ]
+      }));
+    } else if (preset === 'apto_cob_loja') {
+      setForm(prev => ({
+        ...prev,
+        tipos_unidades: [
+          { nome: 'Dedetização (aptos tipo)', valor: 90 },
+          { nome: 'Dedetização (aptos cobertura)', valor: 150 },
+          { nome: 'Dedetização (lojas)', valor: 160 }
+        ]
       }));
     }
   };
@@ -544,17 +613,40 @@ function FormAgendamento({ agendamento, condominios, onSalvar, onFechar }) {
           />
         </div>
         <div className="campo" style={{ marginBottom: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-            <label style={{ fontSize: '11px' }}>Categorias de Unidades Privativas (Até 3)</label>
-            {form.tipos_unidades.length < 3 && (
-              <button 
-                type="button" 
-                onClick={handleAdicionarTipo}
-                style={{ background: '#0284c7', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '4px' }}>
+            <label style={{ fontSize: '11px', margin: 0 }}>Categorias de Unidades Privativas (Dinâmico p/ Comunicado)</label>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => aplicarPresetTipos('so_apto')}
+                style={{ background: form.tipos_unidades.length === 1 ? '#0284c7' : '#e0f2fe', color: form.tipos_unidades.length === 1 ? '#fff' : '#0369a1', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}
               >
-                + Categoria
+                Só Apto
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => aplicarPresetTipos('apto_cob')}
+                style={{ background: form.tipos_unidades.length === 2 ? '#0284c7' : '#e0f2fe', color: form.tipos_unidades.length === 2 ? '#fff' : '#0369a1', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Apto + Cob.
+              </button>
+              <button
+                type="button"
+                onClick={() => aplicarPresetTipos('apto_cob_loja')}
+                style={{ background: form.tipos_unidades.length === 3 ? '#0284c7' : '#e0f2fe', color: form.tipos_unidades.length === 3 ? '#fff' : '#0369a1', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Apto + Cob. + Loja
+              </button>
+              {form.tipos_unidades.length < 3 && (
+                <button 
+                  type="button" 
+                  onClick={handleAdicionarTipo}
+                  style={{ background: '#0f172a', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}
+                >
+                  + Livre
+                </button>
+              )}
+            </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {form.tipos_unidades.map((t, idx) => (
@@ -604,7 +696,7 @@ function FormAgendamento({ agendamento, condominios, onSalvar, onFechar }) {
       </div>
       <div className="modal-acoes">
         <button className="secundario" onClick={onFechar}>Cancelar</button>
-        <button onClick={handleSalvar} disabled={!valido}>Salvar</button>
+        <button onClick={handleSalvar} disabled={!valido}>Salvar e Gerar Comunicado</button>
       </div>
     </Modal>
   );

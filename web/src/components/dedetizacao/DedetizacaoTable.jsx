@@ -7,6 +7,7 @@ export default function DedetizacaoTable({
   onEdit,
   onVisualizar,
   onVerAdesoes = () => {},
+  onGerarComunicado = () => {},
   colunaOrdenacao = 'codigo',
   ordemDirecao = 'asc',
   onOrdenar = () => {}
@@ -67,7 +68,7 @@ export default function DedetizacaoTable({
                     <div>
                       <div>{row.dataAgendada}</div>
                       <div style={{color: '#64748b', fontSize: '11px'}}>{row.periodoAgendado}</div>
-                      {row.agendamento_id && (
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -75,7 +76,6 @@ export default function DedetizacaoTable({
                             onVerAdesoes(row);
                           }}
                           style={{
-                            marginTop: '4px',
                             background: row.total_adesoes > 0 ? '#dcfce7' : '#e0f2fe',
                             color: row.total_adesoes > 0 ? '#15803d' : '#0369a1',
                             border: `1px solid ${row.total_adesoes > 0 ? '#bbf7d0' : '#bae6fd'}`,
@@ -88,17 +88,81 @@ export default function DedetizacaoTable({
                             alignItems: 'center',
                             gap: '3px'
                           }}
-                          title="Clique para gerenciar adesões das unidades e copiar o link do morador"
+                          title="Clique para gerenciar adesões das unidades (mesmo após execução)"
                         >
                           🏢 {row.total_adesoes || 0} {row.total_adesoes === 1 ? 'adesão' : 'adesões'}
                         </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onGerarComunicado(row);
+                          }}
+                          style={{
+                            background: '#eff6ff',
+                            color: '#1e3a8a',
+                            border: '1px solid #bfdbfe',
+                            borderRadius: '4px',
+                            padding: '2px 6px',
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                          title="Gerar Comunicado Oficial (Word / PDF / WhatsApp)"
+                        >
+                          📄 Comunicado
+                        </button>
+                      </div>
+                    </div>
+                  ) : row.dataExecucao ? (
+                    <div>
+                      <div style={{ color: '#94a3b8', fontSize: '12px' }}>—</div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onVerAdesoes(row);
+                        }}
+                        style={{
+                          marginTop: '4px',
+                          background: row.total_adesoes > 0 ? '#dcfce7' : '#f1f5f9',
+                          color: row.total_adesoes > 0 ? '#15803d' : '#475569',
+                          border: `1px solid ${row.total_adesoes > 0 ? '#bbf7d0' : '#cbd5e1'}`,
+                          borderRadius: '4px',
+                          padding: '2px 6px',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}
+                        title="Adicionar ou editar unidades que aderiram na execução"
+                      >
+                        🏢 {row.total_adesoes > 0 ? `${row.total_adesoes} ${row.total_adesoes === 1 ? 'adesão' : 'adesões'}` : '+ Adesões'}
+                      </button>
+                    </div>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td>
+                  {row.dataExecucao ? (
+                    <div>
+                      <div>{row.dataExecucao}</div>
+                      {row.servicoExecutado && (
+                        <div style={{ fontSize: '11px', color: '#6366f1', fontWeight: 600, marginTop: '2px' }}>
+                          {row.servicoExecutado}
+                        </div>
                       )}
                     </div>
                   ) : (
                     '—'
                   )}
                 </td>
-                <td>{row.dataExecucao || '—'}</td>
                 <td>
                   {row.validade || row.dataAgendada}<br/>
                   <span style={{color: '#64748b'}}>{row.validade ? '(6 meses)' : '(Prevista)'}</span>
@@ -125,7 +189,7 @@ export default function DedetizacaoTable({
                     <button 
                       type="button" 
                       className="ded-btn-icon" 
-                      title="Visualizar detalhes" 
+                      title="Visualizar detalhes e histórico de unidades" 
                       onClick={() => onVisualizar(row)}
                     >
                       <IcoEye />
@@ -134,7 +198,7 @@ export default function DedetizacaoTable({
                       type="button" 
                       className="ded-btn-icon" 
                       title={row.agendamento_id ? "Editar agendamento / Registrar execução" : "Registrar execução / Agendar"} 
-                      onClick={() => onEdit(row, row.agendamento_id ? 'agendamento' : 'execucao')}
+                      onClick={() => onEdit(row, row.status === 'Agendado' ? 'agendamento' : 'execucao')}
                     >
                       <IcoEdit />
                     </button>
@@ -159,7 +223,7 @@ export default function DedetizacaoTable({
                             borderRadius: '8px',
                             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                             zIndex: 20,
-                            minWidth: '190px',
+                            minWidth: '210px',
                             padding: '4px 0'
                           }}
                           onClick={(e) => e.stopPropagation()}
@@ -171,13 +235,20 @@ export default function DedetizacaoTable({
                           >
                             Visualizar detalhes
                           </button>
+                          <button
+                            type="button"
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 14px', border: 'none', background: 'none', fontSize: '13px', color: '#0284c7', fontWeight: 600, cursor: 'pointer' }}
+                            onClick={() => { setMenuAbertoId(null); onVerAdesoes(row); }}
+                          >
+                            📋 Unidades Aderidas / Link
+                          </button>
                           {row.agendamento_id && (
                             <button
                               type="button"
-                              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 14px', border: 'none', background: 'none', fontSize: '13px', color: '#0284c7', fontWeight: 600, cursor: 'pointer' }}
-                              onClick={() => { setMenuAbertoId(null); onVerAdesoes(row); }}
+                              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 14px', border: 'none', background: 'none', fontSize: '13px', color: '#1e3a8a', fontWeight: 700, cursor: 'pointer' }}
+                              onClick={() => { setMenuAbertoId(null); onGerarComunicado(row); }}
                             >
-                              📋 Ver Adesões / Link
+                              📄 Gerar Comunicado (Word / PDF)
                             </button>
                           )}
                           <button

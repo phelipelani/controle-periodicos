@@ -57,21 +57,23 @@ router.get('/:chave/detalhado', (req, res) => {
 
   const escopo = filtroEscopo(req.usuario, 'c.id', chave);
   
-  // Buscar condomínios + agendamento pendente + última execução
+  // Buscar condomínios + agendamento (prioriza agendado ativo, senão mantém o último realizado) + última execução
   const rows = db
     .prepare(`
       SELECT 
         c.id AS condominio_id, c.nome AS condominio_nome,
-        cs.ultima_realizacao, cs.data_vencimento,
+        cs.ultima_realizacao, cs.data_vencimento, cs.servico_executado AS cs_servico_executado,
         ag.data_agendada, ag.periodo AS agendamento_periodo, ag.empresa AS agendamento_empresa, ag.id AS agendamento_id, ag.observacao AS agendamento_observacao,
-        ag.token_adesao, ag.valor_area_comum, ag.tipos_unidades, ag.orientacoes,
+        ag.status AS agendamento_status, ag.token_adesao, ag.valor_area_comum, ag.tipos_unidades, ag.orientacoes,
         (SELECT COUNT(*) FROM agendamento_adesoes WHERE agendamento_id = ag.id) AS total_adesoes,
-        h.empresa AS historico_empresa, h.anexo AS historico_anexo, h.observacao AS historico_observacao, h.id AS historico_id
+        h.empresa AS historico_empresa, h.anexo AS historico_anexo, h.observacao AS historico_observacao, h.servico_executado AS historico_servico_executado, h.id AS historico_id
       FROM condominios c
       LEFT JOIN condominio_servicos cs ON cs.condominio_id = c.id AND cs.servico_id = ?
       LEFT JOIN agendamentos ag ON ag.id = (
-        SELECT MAX(id) FROM agendamentos 
-        WHERE condominio_id = c.id AND servico_id = ? AND status = 'agendado'
+        SELECT id FROM agendamentos 
+        WHERE condominio_id = c.id AND servico_id = ? AND status != 'cancelado'
+        ORDER BY (status = 'agendado') DESC, id DESC
+        LIMIT 1
       )
       LEFT JOIN historico h ON h.id = (
         SELECT MAX(id) FROM historico 
@@ -82,18 +84,26 @@ router.get('/:chave/detalhado', (req, res) => {
     `)
     .all(servico.id, servico.id, ...escopo.params);
 
+  const stmtAdesoes = db.prepare(`
+    SELECT * FROM agendamento_adesoes
+    WHERE agendamento_id = ?
+    ORDER BY CAST(unidade AS INTEGER) ASC, unidade ASC
+  `);
+
   const itens = rows.map((r) => {
     const { status: baseStatus } = statusVencimento(r.data_vencimento, servico.alerta_dias_antes);
     
-    // Calcular status final de dedetização
+    // Calcular status final de dedetização (só fica 'agendado' se houver agendamento ativo com status = 'agendado')
     let statusCalc = baseStatus;
-    if (r.data_agendada) {
+    if (r.agendamento_status === 'agendado' && r.data_agendada) {
       statusCalc = 'agendado';
     } else if (baseStatus === 'em_dia' && !r.historico_anexo) {
       statusCalc = 'sem_nota';
     } else if (baseStatus === 'a_vencer' || baseStatus === 'sem_registro') {
       statusCalc = 'pendente';
     }
+
+    const adesoes = r.agendamento_id ? stmtAdesoes.all(r.agendamento_id) : [];
 
     return {
       id: r.condominio_id,
@@ -105,11 +115,13 @@ router.get('/:chave/detalhado', (req, res) => {
       periodo: r.agendamento_periodo || '',
       data_execucao: r.ultima_realizacao || null,
       proxima_execucao: r.data_vencimento || null,
+      servico_executado: r.historico_servico_executado || r.cs_servico_executado || null,
       status: statusCalc,
       nota: r.historico_anexo ? { status: 'Anexada', path: r.historico_anexo } : { status: 'Pendente', path: null },
       historico_anexo: r.historico_anexo || null,
       observacoes: r.historico_observacao || null,
       agendamento_id: r.agendamento_id,
+      agendamento_status: r.agendamento_status || null,
       agendamento_empresa: r.agendamento_empresa || null,
       agendamento_periodo: r.agendamento_periodo || 'Manhã',
       agendamento_observacao: r.agendamento_observacao || '',
@@ -118,6 +130,7 @@ router.get('/:chave/detalhado', (req, res) => {
       tipos_unidades: r.tipos_unidades || null,
       orientacoes: r.orientacoes || null,
       total_adesoes: r.total_adesoes || 0,
+      adesoes,
       historico_id: r.historico_id
     };
   });

@@ -31,12 +31,12 @@ export default function CondominiosKpis({ stats = {}, filtroStatus = 'Todos', on
         title="Clique para ver todos os condomínios no filtro"
       >
         <div className="ded-kpi-top">
-          <div className="ded-kpi-icon" style={{ background: '#20395A', color: '#60A5FA' }}>
+          <div className="ded-kpi-icon" style={{ background: '#eff6ff', color: '#3b82f6' }}>
             <IcoCondominio />
           </div>
           <div className="ded-kpi-info">
             <span className="ded-kpi-label">Condomínios</span>
-            <span className="ded-kpi-value" style={{ color: '#F1F5F9' }}>
+            <span className="ded-kpi-value">
               <AnimatedNumber value={total} />
             </span>
           </div>
@@ -55,12 +55,12 @@ export default function CondominiosKpis({ stats = {}, filtroStatus = 'Todos', on
         title="Clique para filtrar apenas condomínios em dia"
       >
         <div className="ded-kpi-top">
-          <div className="ded-kpi-icon" style={{ background: '#123222', color: '#22C55E' }}>
+          <div className="ded-kpi-icon" style={{ background: '#dcfce7', color: '#16a34a' }}>
             <IcoCheckCircle />
           </div>
           <div className="ded-kpi-info">
             <span className="ded-kpi-label">Em dia</span>
-            <span className="ded-kpi-value" style={{ color: '#F1F5F9' }}>
+            <span className="ded-kpi-value" style={{ color: '#16a34a' }}>
               <AnimatedNumber value={emDia} />
             </span>
           </div>
@@ -79,12 +79,12 @@ export default function CondominiosKpis({ stats = {}, filtroStatus = 'Todos', on
         title="Clique para filtrar condomínios em atenção"
       >
         <div className="ded-kpi-top">
-          <div className="ded-kpi-icon" style={{ background: '#3A2A10', color: '#F59E0B' }}>
+          <div className="ded-kpi-icon" style={{ background: '#fef3c7', color: '#d97706' }}>
             <IcoAlert />
           </div>
           <div className="ded-kpi-info">
             <span className="ded-kpi-label">Em atenção</span>
-            <span className="ded-kpi-value" style={{ color: '#F1F5F9' }}>
+            <span className="ded-kpi-value" style={{ color: '#d97706' }}>
               <AnimatedNumber value={emAtencao} />
             </span>
           </div>
@@ -103,12 +103,12 @@ export default function CondominiosKpis({ stats = {}, filtroStatus = 'Todos', on
         title="Clique para filtrar condomínios com pendências"
       >
         <div className="ded-kpi-top">
-          <div className="ded-kpi-icon" style={{ background: '#431923', color: '#EF233C' }}>
+          <div className="ded-kpi-icon" style={{ background: '#fee2e2', color: '#dc2626' }}>
             <IcoAlertTriangle />
           </div>
           <div className="ded-kpi-info">
             <span className="ded-kpi-label">Com pendências</span>
-            <span className="ded-kpi-value" style={{ color: '#F1F5F9' }}>
+            <span className="ded-kpi-value" style={{ color: '#dc2626' }}>
               <AnimatedNumber value={comPendencias} />
             </span>
           </div>

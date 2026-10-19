@@ -241,7 +241,7 @@ router.delete('/:id', exigirAdmin, (req, res) => {
 router.put('/:id/servicos/:servicoId', (req, res) => {
   const condominioId = Number(req.params.id);
   const servicoId = Number(req.params.servicoId);
-  const { data, empresa, observacao, anexo } = req.body || {};
+  const { data, empresa, observacao, anexo, servico_executado } = req.body || {};
   if (!data) return res.status(400).json({ erro: 'Data é obrigatória' });
   if (!podeAcessarCondominio(req.usuario, condominioId)) {
     return res.status(403).json({ erro: 'Você não tem acesso a este condomínio' });
@@ -262,12 +262,14 @@ router.put('/:id/servicos/:servicoId', (req, res) => {
       empresa: empresa || null,
       observacao: observacao || null,
       anexo: anexo || null,
+      servico_executado: servico_executado || null,
     });
 
     registrarAuditoria(req, 'REGISTRAR_SERVICO', 'condominio_servicos', servicoId, {
       condominio_id: condominioId,
       servico_id: servicoId,
       servico_chave: servico?.chave,
+      servico_executado,
       data,
       empresa,
       tem_anexo: !!anexo

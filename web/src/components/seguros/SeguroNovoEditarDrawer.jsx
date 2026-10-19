@@ -51,6 +51,8 @@ export default function SeguroNovoEditarDrawer({
   const [valorDeNovo, setValorDeNovo] = useState(true);
   const [vigenciaInicio, setVigenciaInicio] = useState('2025-06-05');
   const [vigenciaFim, setVigenciaFim] = useState('2026-06-05');
+  const [premioLiquido, setPremioLiquido] = useState('');
+  const [premioTotal, setPremioTotal] = useState('');
   const [observacoes, setObservacoes] = useState('');
 
   // Form State - Cobertura por Unidade
@@ -106,6 +108,9 @@ export default function SeguroNovoEditarDrawer({
           if (condLocal.numeroApolice && condLocal.numeroApolice !== '—') setNumeroApolice(condLocal.numeroApolice);
           if (condLocal.dataRenovacao) setVigenciaInicio(condLocal.dataRenovacao);
           if (condLocal.dataValidade) setVigenciaFim(condLocal.dataValidade);
+          if (condLocal.premioLiquido != null) setPremioLiquido(condLocal.premioLiquido);
+          else if (condLocal.premio_liquido != null) setPremioLiquido(condLocal.premio_liquido);
+          if (condLocal.premioTotal != null) setPremioTotal(condLocal.premioTotal);
           if (condLocal.observacoes) setObservacoes(condLocal.observacoes);
         }
 
@@ -159,6 +164,8 @@ export default function SeguroNovoEditarDrawer({
                 setValorDeNovo(a.valorDeNovo !== false);
                 setVigenciaInicio(a.vigenciaInicio || a.dataRenovacao || '');
                 setVigenciaFim(a.vigenciaFim || a.dataValidade || '');
+                setPremioLiquido(a.premioLiquido != null ? a.premioLiquido : (a.premio_liquido != null ? a.premio_liquido : ''));
+                setPremioTotal(a.premioTotal != null ? a.premioTotal : (a.premio_total != null ? a.premio_total : ''));
                 setCoberturaPorUnidade(a.coberturaPorUnidade || 300000);
                 setObservacoes(a.observacoes || '');
               } else {
@@ -168,6 +175,8 @@ export default function SeguroNovoEditarDrawer({
                 setEnderecoLocalSegurado(res.condominio?.endereco || '');
                 setVigenciaInicio('');
                 setVigenciaFim('');
+                setPremioLiquido('');
+                setPremioTotal('');
                 setObservacoes('');
               }
 
@@ -219,6 +228,8 @@ export default function SeguroNovoEditarDrawer({
         setValorDeNovo(true);
         setVigenciaInicio('');
         setVigenciaFim('');
+        setPremioLiquido('');
+        setPremioTotal('');
         setCoberturaPorUnidade(300000);
         setCoberturas([]);
         setObservacoes('');
@@ -283,6 +294,8 @@ export default function SeguroNovoEditarDrawer({
           setEnderecoLocalSegurado(a.enderecoLocalSegurado || c.endereco || '');
           setVigenciaInicio(a.vigenciaInicio || a.dataRenovacao || '');
           setVigenciaFim(a.vigenciaFim || a.dataValidade || '');
+          setPremioLiquido(a.premioLiquido != null ? a.premioLiquido : (a.premio_liquido != null ? a.premio_liquido : ''));
+          setPremioTotal(a.premioTotal != null ? a.premioTotal : (a.premio_total != null ? a.premio_total : ''));
           setCoberturaPorUnidade(a.coberturaPorUnidade || 300000);
           setObservacoes(a.observacoes || '');
         }
@@ -372,6 +385,8 @@ export default function SeguroNovoEditarDrawer({
       if (data.versao_tabela) setVersaoTabela(data.versao_tabela);
       if (data.valor_de_novo !== undefined) setValorDeNovo(data.valor_de_novo);
       if (data.endereco_local_segurado) setEnderecoLocalSegurado(data.endereco_local_segurado);
+      if (data.premio_liquido !== undefined && data.premio_liquido !== null) setPremioLiquido(data.premio_liquido);
+      if (data.premio_total !== undefined && data.premio_total !== null) setPremioTotal(data.premio_total);
 
       // Dados Cadastrais do Condomínio extraídos do PDF
       if (data.cnpj) setCnpj(data.cnpj);
@@ -565,6 +580,8 @@ export default function SeguroNovoEditarDrawer({
         data_renovacao: vigenciaInicio,
         data_validade: vigenciaFim,
         cobertura_por_unidade: Number(coberturaPorUnidade) || 300000,
+        premio_liquido: premioLiquido !== '' ? Number(premioLiquido) : null,
+        premio_total: premioTotal !== '' ? Number(premioTotal) : null,
         observacoes
       },
       coberturas: finalCoberturas
@@ -968,6 +985,54 @@ export default function SeguroNovoEditarDrawer({
                     <option value="0">Não</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Valores Financeiros do Seguro */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px' }}>
+                <div className="seg-filter-group">
+                  <label style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                    💰 Prêmio Líquido (R$ - Valor Pago)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="seg-input"
+                    placeholder="Ex: 3450.80"
+                    value={premioLiquido}
+                    onChange={(e) => setPremioLiquido(e.target.value)}
+                    style={{ fontWeight: 600, fontSize: '14px' }}
+                  />
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Valor total pago pelo condomínio pelo seguro
+                  </div>
+                </div>
+
+                <div className="seg-filter-group">
+                  <label>Prêmio Total com IOF (R$ - Opcional)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="seg-input"
+                    placeholder="Ex: 3700.00"
+                    value={premioTotal}
+                    onChange={(e) => setPremioTotal(e.target.value)}
+                  />
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Valor bruto total incluindo IOF/taxas
+                  </div>
+                </div>
+              </div>
+
+              <div className="seg-filter-group">
+                <label>Observações do Seguro</label>
+                <textarea
+                  className="seg-input"
+                  rows={2}
+                  placeholder="Informações adicionais, parcelamento, forma de pagamento, cláusulas especiais..."
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  style={{ resize: 'vertical' }}
+                />
               </div>
 
               {/* Anexo Rápido de Apólice */}

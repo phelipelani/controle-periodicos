@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../api';
 import { IcoDoc, IcoTrash, IcoCheck } from '../icons';
 
-export default function AgendamentoAdesoesDrawer({ open, onClose, agendamento, onAtualizar }) {
+export default function AgendamentoAdesoesDrawer({ open, onClose, agendamento, onAtualizar, onAbrirComunicado }) {
   const [adesoes, setAdesoes] = useState([]);
   const [agendamentoCompleto, setAgendamentoCompleto] = useState(null);
   const [carregando, setCarregando] = useState(false);
@@ -12,37 +12,62 @@ export default function AgendamentoAdesoesDrawer({ open, onClose, agendamento, o
   const [copiadoLink, setCopiadoLink] = useState(false);
   const [copiadoTexto, setCopiadoTexto] = useState(false);
 
-  // Form para adicionar adesão manualmente
+  // Form para adicionar / editar adesão manualmente
   const [mostrandoAdd, setMostrandoAdd] = useState(false);
+  const [editandoAdesaoId, setEditandoAdesaoId] = useState(null);
   const [novaUnidade, setNovaUnidade] = useState('');
   const [novoBloco, setNovoBloco] = useState('');
   const [novoNome, setNovoNome] = useState('');
   const [novoTelefone, setNovoTelefone] = useState('');
   const [novoTipo, setNovoTipo] = useState('');
+  const [novoValorCustom, setNovoValorCustom] = useState('');
   const [novoMetodo, setNovoMetodo] = useState('Pulverização e Gel');
   const [novasObs, setNovasObs] = useState('');
 
   const agAtual = agendamentoCompleto || agendamento || {};
+  const agId = agAtual.id || agendamento?.id || 0;
+
+  const DEFAULT_TIPOS = [
+    { nome: 'Apartamento Padrão', valor: 80 },
+    { nome: 'Cobertura / Duplex', valor: 130 },
+    { nome: 'Loja / Comercial', valor: 160 }
+  ];
 
   const tipos = (() => {
     const rawTipos = agAtual.tipos_unidades || agendamento?.tipos_unidades;
-    if (!rawTipos) return [];
+    if (!rawTipos) return DEFAULT_TIPOS;
     if (typeof rawTipos === 'string') {
-      try { return JSON.parse(rawTipos); } catch { return []; }
+      try {
+        const parsed = JSON.parse(rawTipos);
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_TIPOS;
+      } catch {
+        return DEFAULT_TIPOS;
+      }
     }
-    return Array.isArray(rawTipos) ? rawTipos : [];
+    return Array.isArray(rawTipos) && rawTipos.length > 0 ? rawTipos : DEFAULT_TIPOS;
   })();
 
-  const carregarAdesoes = async () => {
-    if (!agendamento?.id) return;
+  const carregarAdesoes = async (idOverride) => {
+    const targetId = idOverride || agAtual.id || agendamento?.id;
     try {
       setCarregando(true);
       setErro('');
-      const data = await api.get(`/agendamentos/${agendamento.id}/adesoes`);
-      const lista = Array.isArray(data) ? data : (data?.adesoes || []);
-      setAdesoes(lista);
-      if (data?.agendamento) {
-        setAgendamentoCompleto(data.agendamento);
+      if (targetId) {
+        const data = await api.get(`/agendamentos/${targetId}/adesoes`);
+        const lista = Array.isArray(data) ? data : (data?.adesoes || []);
+        setAdesoes(lista);
+        if (data?.agendamento) {
+          setAgendamentoCompleto(data.agendamento);
+        }
+      } else if (agendamento?.condominio_id) {
+        const hist = await api.get(`/agendamentos/condominio/${agendamento.condominio_id}/historico-adesoes`);
+        const ultimo = hist?.agendamentos?.[0];
+        if (ultimo) {
+          setAgendamentoCompleto(ultimo);
+          setAdesoes(ultimo.adesoes || []);
+        } else {
+          setAdesoes([]);
+        }
       }
     } catch (err) {
       setErro(err.message || 'Erro ao carregar lista de adesões');
@@ -52,13 +77,17 @@ export default function AgendamentoAdesoesDrawer({ open, onClose, agendamento, o
   };
 
   useEffect(() => {
-    if (open && agendamento?.id) {
-      carregarAdesoes();
+    if (open) {
+      setAgendamentoCompleto(null);
+      setEditandoAdesaoId(null);
+      setMostrandoAdd(false);
+      carregarAdesoes(agendamento?.id);
       if (tipos.length > 0) {
         setNovoTipo(tipos[0].nome);
+        setNovoValorCustom(String(tipos[0].valor ?? 80));
       }
     }
-  }, [open, agendamento?.id]);
+  }, [open, agendamento?.id, agendamento?.condominio_id]);
 
   const tokenFinal = agAtual.token_adesao || agendamento?.token_adesao;
   const linkAdesao = tokenFinal
@@ -139,7 +168,7 @@ Atenciosamente,
 
   const handleToggleExecutado = async (adesaoId, atual) => {
     try {
-      await api.patch(`/agendamentos/${agendamento.id}/adesoes/${adesaoId}/executado`, {
+      await api.patch(`/agendamentos/${agId}/adesoes/${adesaoId}/executado`, {
         executado: !atual
       });
       setAdesoes(prev => prev.map(a => a.id === adesaoId ? { ...a, executado: !atual ? 1 : 0 } : a));
@@ -152,11 +181,38 @@ Atenciosamente,
   const handleExcluirAdesao = async (adesaoId, unidadeNome) => {
     if (!window.confirm(`Deseja remover a adesão da unidade ${unidadeNome}?`)) return;
     try {
-      await api.delete(`/agendamentos/${agendamento.id}/adesoes/${adesaoId}`);
+      await api.delete(`/agendamentos/${agId}/adesoes/${adesaoId}`);
       setAdesoes(prev => prev.filter(a => a.id !== adesaoId));
       if (onAtualizar) onAtualizar();
     } catch (err) {
       alert(err.message || 'Erro ao remover adesão');
+    }
+  };
+
+  const iniciarEdicaoAdesao = (a) => {
+    setEditandoAdesaoId(a.id);
+    setNovaUnidade(a.unidade || '');
+    setNovoBloco(a.bloco || '');
+    setNovoNome(a.nome_morador || '');
+    setNovoTelefone(a.telefone && a.telefone !== 'Não informado' ? a.telefone : '');
+    setNovoTipo(a.tipo_unidade || (tipos[0]?.nome || 'Apartamento Padrão'));
+    setNovoValorCustom(a.valor !== undefined && a.valor !== null ? String(a.valor) : '80');
+    setNovoMetodo(a.metodo || 'Pulverização e Gel');
+    setNovasObs(a.observacoes || '');
+    setMostrandoAdd(true);
+  };
+
+  const cancelarFormAdesao = () => {
+    setMostrandoAdd(false);
+    setEditandoAdesaoId(null);
+    setNovaUnidade('');
+    setNovoBloco('');
+    setNovoNome('');
+    setNovoTelefone('');
+    setNovasObs('');
+    if (tipos.length > 0) {
+      setNovoTipo(tipos[0].nome);
+      setNovoValorCustom(String(tipos[0].valor ?? 80));
     }
   };
 
@@ -167,41 +223,53 @@ Atenciosamente,
       return;
     }
     const tipoObj = tipos.find(t => t.nome === novoTipo);
-    const valor = tipoObj ? tipoObj.valor : 0;
+    const valorCalculado = novoValorCustom !== '' ? Number(novoValorCustom) : (tipoObj ? Number(tipoObj.valor) : 80);
 
     try {
-      const res = await fetch(`/api/agendamentos/adesao/${agendamento.token_adesao}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
-        body: JSON.stringify({
+      setErro('');
+      if (editandoAdesaoId) {
+        await api.put(`/agendamentos/${agId}/adesoes/${editandoAdesaoId}`, {
           unidade: novaUnidade.trim(),
           bloco: novoBloco.trim() || null,
           nome_morador: novoNome.trim(),
           telefone: novoTelefone.trim() || 'Não informado',
-          tipo_unidade: novoTipo || 'Apartamento',
-          valor: valor,
+          tipo_unidade: novoTipo || 'Apartamento Padrão',
+          valor: valorCalculado,
           metodo: novoMetodo,
           observacoes: novasObs.trim() || null
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.erro || 'Erro ao registrar adesão manual');
+        });
+        setSucesso('Unidade atualizada com sucesso!');
+      } else {
+        const resp = await api.post(`/agendamentos/${agId || 0}/adesoes`, {
+          condominio_id: agAtual.condominio_id || agendamento?.condominio_id,
+          data_agendada: agAtual.data_agendada || agendamento?.data_agendada,
+          empresa: agAtual.empresa || agendamento?.empresa,
+          unidade: novaUnidade.trim(),
+          bloco: novoBloco.trim() || null,
+          nome_morador: novoNome.trim(),
+          telefone: novoTelefone.trim() || 'Não informado',
+          tipo_unidade: novoTipo || 'Apartamento Padrão',
+          valor: valorCalculado,
+          metodo: novoMetodo,
+          observacoes: novasObs.trim() || null
+        });
+        if (resp?.agendamento) {
+          setAgendamentoCompleto(resp.agendamento);
+        }
+        setSucesso('Unidade adicionada com sucesso!');
+        await carregarAdesoes(resp?.agendamento?.id || agId);
+        cancelarFormAdesao();
+        setTimeout(() => setSucesso(''), 3500);
+        if (onAtualizar) onAtualizar();
+        return;
+      }
 
-      setNovaUnidade('');
-      setNovoBloco('');
-      setNovoNome('');
-      setNovoTelefone('');
-      setNovasObs('');
-      setMostrandoAdd(false);
-      setSucesso('Unidade adicionada com sucesso!');
+      cancelarFormAdesao();
       setTimeout(() => setSucesso(''), 3500);
-      carregarAdesoes();
+      await carregarAdesoes(agId);
       if (onAtualizar) onAtualizar();
     } catch (err) {
-      alert(err.message || 'Falha ao adicionar unidade');
+      alert(err.message || 'Falha ao salvar unidade');
     }
   };
 
@@ -368,14 +436,25 @@ Atenciosamente,
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+            {onAbrirComunicado && (
+              <button 
+                type="button" 
+                onClick={() => onAbrirComunicado(agAtual)}
+                style={{ ...styles.actionBtn, flex: 1, justifyContent: 'center', background: '#1e3a8a' }}
+                title="Gerar Comunicado Oficial em Word (.doc) ou PDF com tabela de valores e link clicável"
+              >
+                📄 Comunicado (Word / PDF)
+              </button>
+            )}
+
             <button 
               type="button" 
               onClick={copiarTextoComunicado}
               style={{ ...styles.actionBtn, flex: 1, justifyContent: 'center', background: copiadoTexto ? '#15803d' : '#059669' }}
               title="Copiar comunicado formatado com tabela de preços e link para WhatsApp ou E-mail"
             >
-              {copiadoTexto ? '✓ Comunicado Copiado!' : '✉️ Copiar Comunicado Pronto'}
+              {copiadoTexto ? '✓ Copiado!' : '📲 Copiar p/ WhatsApp'}
             </button>
 
             <button 
@@ -447,18 +526,21 @@ Atenciosamente,
             />
             <button 
               type="button" 
-              onClick={() => setMostrandoAdd(!mostrandoAdd)}
+              onClick={() => {
+                if (mostrandoAdd) cancelarFormAdesao();
+                else setMostrandoAdd(true);
+              }}
               style={styles.btnAddManual}
             >
               {mostrandoAdd ? 'Fechar' : '+ Adicionar Unidade'}
             </button>
           </div>
 
-          {/* Form manual de adição */}
+          {/* Form manual de adição / edição */}
           {mostrandoAdd && (
             <form onSubmit={handleAddManual} style={styles.formManual}>
               <div style={{ fontSize: '13px', fontWeight: '700', color: '#334155', marginBottom: '8px' }}>
-                Incluir Unidade Manualmente
+                {editandoAdesaoId ? '✏️ Editar Unidade Aderida' : '➕ Incluir Unidade Manualmente (mesmo após execução)'}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
                 <input 
@@ -494,9 +576,18 @@ Atenciosamente,
                   style={styles.inputMini}
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr 1fr', gap: '10px', marginBottom: '10px' }}>
                 {tipos && tipos.length > 0 ? (
-                  <select value={novoTipo} onChange={e => setNovoTipo(e.target.value)} style={styles.inputMini}>
+                  <select
+                    value={novoTipo}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setNovoTipo(val);
+                      const achou = tipos.find(t => t.nome === val);
+                      if (achou) setNovoValorCustom(String(achou.valor ?? 0));
+                    }}
+                    style={styles.inputMini}
+                  >
                     {tipos.map((t, idx) => (
                       <option key={idx} value={t.nome}>{t.nome} (R$ {Number(t.valor).toFixed(2)})</option>
                     ))}
@@ -504,15 +595,34 @@ Atenciosamente,
                 ) : (
                   <input type="text" value={novoTipo} onChange={e => setNovoTipo(e.target.value)} placeholder="Tipo (Apto)" style={styles.inputMini} />
                 )}
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Valor (R$)"
+                  value={novoValorCustom}
+                  onChange={e => setNovoValorCustom(e.target.value)}
+                  style={styles.inputMini}
+                />
                 <select value={novoMetodo} onChange={e => setNovoMetodo(e.target.value)} style={styles.inputMini}>
                   <option value="Pulverização e Gel">Pulverização e Gel</option>
                   <option value="Pulverização">Apenas Pulverização</option>
                   <option value="Gel Inodoro">Apenas Gel Inodoro</option>
                 </select>
               </div>
+              <div style={{ marginBottom: '10px' }}>
+                <input
+                  type="text"
+                  placeholder="Observações (ex: Feito lá na hora, autorizado pelo zelador...)"
+                  value={novasObs}
+                  onChange={e => setNovasObs(e.target.value)}
+                  style={styles.inputMini}
+                />
+              </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button type="button" onClick={() => setMostrandoAdd(false)} style={styles.btnSecundarioMini}>Cancelar</button>
-                <button type="submit" style={styles.btnPrimarioMini}>Salvar Unidade</button>
+                <button type="button" onClick={cancelarFormAdesao} style={styles.btnSecundarioMini}>Cancelar</button>
+                <button type="submit" style={styles.btnPrimarioMini}>
+                  {editandoAdesaoId ? 'Salvar Alterações' : 'Salvar Unidade'}
+                </button>
               </div>
             </form>
           )}
@@ -525,7 +635,7 @@ Atenciosamente,
               <div style={{ fontSize: '24px', marginBottom: '8px' }}>📋</div>
               <div style={{ fontWeight: '600', color: '#334155', fontSize: '14px' }}>Nenhuma unidade registrada ainda</div>
               <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                Copie o link ou o comunicado acima para divulgar entre os moradores.
+                Clique em "+ Adicionar Unidade" acima para registrar unidades feitas na hora ou divulgue o link entre os moradores.
               </div>
             </div>
           ) : (
@@ -557,6 +667,15 @@ Atenciosamente,
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button 
+                        type="button" 
+                        onClick={() => iniciarEdicaoAdesao(a)}
+                        style={{ ...styles.btnAcaoMini, background: '#e0f2fe', color: '#0369a1' }}
+                        title="Editar dados desta unidade"
+                      >
+                        ✏️ Editar
+                      </button>
+
                       <button 
                         type="button" 
                         onClick={() => handleToggleExecutado(a.id, a.executado)}

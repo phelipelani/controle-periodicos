@@ -270,6 +270,7 @@ router.get('/', (req, res) => {
       COALESCE(a.anexo, h.anexo) AS recibo_anexo,
       h.id AS historico_id,
       (SELECT COUNT(*) FROM agendamento_adesoes WHERE agendamento_id = a.id) AS adesoes_count,
+      (SELECT COUNT(*) FROM agendamento_adesoes WHERE agendamento_id = a.id) AS total_adesoes,
       (SELECT COALESCE(SUM(valor), 0) FROM agendamento_adesoes WHERE agendamento_id = a.id) AS adesoes_total_valor
     FROM agendamentos a
     JOIN condominios c ON c.id = a.condominio_id
@@ -280,9 +281,46 @@ router.get('/', (req, res) => {
       WHERE condominio_servico_id = cs.id
     )
     WHERE ${where.join(' AND ')}
-    ORDER BY (a.status = 'agendado') DESC, a.data_agendada ASC
+    ORDER BY (a.status = 'agendado') DESC, a.data_agendada DESC
   `;
   res.json(db.prepare(sql).all(...params));
+});
+
+// Histórico completo de agendamentos e unidades aderidas de um condomínio
+router.get('/condominio/:condominioId/historico-adesoes', (req, res) => {
+  const condominioId = Number(req.params.condominioId);
+  if (!podeAcessarCondominio(req.usuario, condominioId)) {
+    return res.status(403).json({ erro: 'Você não tem acesso a este condomínio' });
+  }
+
+  const agendamentos = db.prepare(`
+    SELECT a.*, c.nome AS condominio_nome, printf('%03d', c.id) AS codigo_condominio
+    FROM agendamentos a
+    JOIN condominios c ON c.id = a.condominio_id
+    WHERE a.condominio_id = ? AND a.status != 'cancelado'
+    ORDER BY a.data_agendada DESC, a.id DESC
+  `).all(condominioId);
+
+  const resultado = agendamentos.map((ag) => {
+    const adesoes = db.prepare(`
+      SELECT * FROM agendamento_adesoes
+      WHERE agendamento_id = ?
+      ORDER BY CAST(unidade AS INTEGER) ASC, unidade ASC
+    `).all(ag.id);
+
+    const valorTotalUnidades = adesoes.reduce((acc, cur) => acc + (Number(cur.valor) || 0), 0);
+    return {
+      ...ag,
+      adesoes,
+      total_unidades: adesoes.length,
+      valor_total_unidades: valorTotalUnidades
+    };
+  });
+
+  res.json({
+    condominio_id: condominioId,
+    agendamentos: resultado
+  });
 });
 
 router.post('/', (req, res) => {
@@ -468,6 +506,156 @@ router.get('/:id/adesoes', (req, res) => {
   });
 });
 
+// Adicionar adesão manualmente pelo painel interno (sem bloqueio de data limite ou status realizado)
+router.post('/:id/adesoes', (req, res) => {
+  let id = Number(req.params.id);
+  let ag = id > 0 ? db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(id) : null;
+
+  // Caso o condomínio tenha sido executado direto sem registro de agendamento prévio, cria ou vincula ao último agendamento
+  if (!ag && req.body?.condominio_id) {
+    const condId = Number(req.body.condominio_id);
+    if (!podeAcessarCondominio(req.usuario, condId)) {
+      return res.status(403).json({ erro: 'Você não tem acesso a este condomínio' });
+    }
+    ag = db.prepare(`
+      SELECT * FROM agendamentos 
+      WHERE condominio_id = ? AND status != 'cancelado' 
+      ORDER BY id DESC LIMIT 1
+    `).get(condId);
+
+    if (!ag) {
+      const ded = db.prepare("SELECT id FROM servicos WHERE chave = 'dedetizacao'").get();
+      const cs = db.prepare('SELECT * FROM condominio_servicos WHERE condominio_id = ? AND servico_id = ?').get(condId, ded?.id);
+      const ultHist = cs ? db.prepare('SELECT * FROM historico WHERE condominio_servico_id = ? ORDER BY id DESC LIMIT 1').get(cs.id) : null;
+      const dataBase = req.body.data_agendada || cs?.ultima_realizacao || new Date().toISOString().split('T')[0];
+      const empresaBase = req.body.empresa || ultHist?.empresa || null;
+      const tokenAdesao = crypto.randomBytes(8).toString('hex');
+      const statusInicial = cs?.ultima_realizacao ? 'realizado' : 'agendado';
+
+      const infoAg = db.prepare(`
+        INSERT INTO agendamentos (
+          condominio_id, servico_id, data_agendada, periodo, empresa, status, token_adesao, criado_por
+        ) VALUES (?, ?, ?, 'Manhã', ?, ?, ?, ?)
+      `).run(condId, ded?.id, dataBase, empresaBase, statusInicial, tokenAdesao, req.usuario.id);
+
+      ag = db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(infoAg.lastInsertRowid);
+    }
+  }
+
+  if (!ag) return res.status(404).json({ erro: 'Agendamento não encontrado' });
+  if (!podeAcessarCondominio(req.usuario, ag.condominio_id)) {
+    return res.status(403).json({ erro: 'Você não tem acesso a este condomínio' });
+  }
+
+  const { unidade, bloco, nome_morador, telefone, email, tipo_unidade, metodo, observacoes, valor, executado } = req.body || {};
+
+  if (!unidade || !String(unidade).trim()) {
+    return res.status(400).json({ erro: 'Informe o número da unidade / apartamento.' });
+  }
+  if (!nome_morador || !String(nome_morador).trim()) {
+    return res.status(400).json({ erro: 'Informe o nome do morador / responsável.' });
+  }
+
+  const unidadeNorm = String(unidade).trim().toUpperCase();
+  const blocoNorm = bloco && String(bloco).trim() ? String(bloco).trim().toUpperCase() : null;
+  const nomeNorm = String(nome_morador).trim();
+  const telNorm = telefone && String(telefone).trim() ? String(telefone).trim() : null;
+  const emailNorm = email && String(email).trim() ? String(email).trim().toLowerCase() : null;
+
+  // Verificar duplicidade no mesmo agendamento
+  const existente = db.prepare(`
+    SELECT id FROM agendamento_adesoes 
+    WHERE agendamento_id = ? AND UPPER(TRIM(unidade)) = ? AND (bloco IS ? OR UPPER(TRIM(bloco)) = ?)
+  `).get(ag.id, unidadeNorm, blocoNorm, blocoNorm);
+
+  if (existente) {
+    return res.status(409).json({
+      erro: `Esta unidade (${unidadeNorm}${blocoNorm ? ` - Bloco ${blocoNorm}` : ''}) já possui uma adesão registrada neste agendamento.`
+    });
+  }
+
+  let valorFinal = Number(valor);
+  if (isNaN(valorFinal) || valorFinal < 0) {
+    let tiposLista = [];
+    try { tiposLista = JSON.parse(ag.tipos_unidades || '[]'); } catch (e) {}
+    if (Array.isArray(tiposLista) && tiposLista.length > 0) {
+      const achou = tiposLista.find((t) => t.tipo === tipo_unidade || t.nome === tipo_unidade);
+      valorFinal = achou ? (Number(achou.valor) || 0) : (Number(tiposLista[0].valor) || 80);
+    } else {
+      valorFinal = 80;
+    }
+  }
+
+  const hoje = new Date().toISOString().split('T')[0];
+  const foiExecutado = executado !== undefined
+    ? (executado ? 1 : 0)
+    : (ag.status === 'realizado' || (ag.data_agendada && ag.data_agendada <= hoje) ? 1 : 0);
+
+  const info = db.prepare(`
+    INSERT INTO agendamento_adesoes (
+      agendamento_id, unidade, bloco, nome_morador, telefone, email, tipo_unidade, valor, metodo, observacoes, executado
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    ag.id,
+    unidadeNorm,
+    blocoNorm,
+    nomeNorm,
+    telNorm,
+    emailNorm,
+    tipo_unidade || 'Apartamento Padrão',
+    valorFinal,
+    metodo || 'Pulverização e Gel',
+    observacoes ? String(observacoes).trim().slice(0, 300) : null,
+    foiExecutado
+  );
+
+  const novaAdesao = db.prepare('SELECT * FROM agendamento_adesoes WHERE id = ?').get(info.lastInsertRowid);
+  res.status(201).json({
+    ok: true,
+    mensagem: 'Unidade adicionada com sucesso!',
+    agendamento: ag,
+    adesao: novaAdesao
+  });
+});
+
+// Editar dados de uma adesão de unidade (mesmo após execução)
+router.put('/:id/adesoes/:adesaoId', (req, res) => {
+  const id = Number(req.params.id);
+  const adesaoId = Number(req.params.adesaoId);
+  const ag = db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(id);
+
+  if (!ag) return res.status(404).json({ erro: 'Agendamento não encontrado' });
+  if (!podeAcessarCondominio(req.usuario, ag.condominio_id)) {
+    return res.status(403).json({ erro: 'Você não tem acesso a este condomínio' });
+  }
+
+  const atual = db.prepare('SELECT * FROM agendamento_adesoes WHERE id = ? AND agendamento_id = ?').get(adesaoId, id);
+  if (!atual) return res.status(404).json({ erro: 'Adesão não encontrada' });
+
+  const { unidade, bloco, nome_morador, telefone, tipo_unidade, valor, metodo, observacoes, executado } = req.body || {};
+
+  const unidadeNorm = unidade !== undefined ? String(unidade).trim().toUpperCase() : atual.unidade;
+  const blocoNorm = bloco !== undefined ? (bloco && String(bloco).trim() ? String(bloco).trim().toUpperCase() : null) : atual.bloco;
+  const nomeNorm = nome_morador !== undefined ? String(nome_morador).trim() : atual.nome_morador;
+  const telNorm = telefone !== undefined ? (telefone && String(telefone).trim() ? String(telefone).trim() : null) : atual.telefone;
+  const tipoNorm = tipo_unidade !== undefined ? tipo_unidade : atual.tipo_unidade;
+  const valorNorm = valor !== undefined ? Number(valor) : atual.valor;
+  const metodoNorm = metodo !== undefined ? metodo : atual.metodo;
+  const obsNorm = observacoes !== undefined ? (observacoes ? String(observacoes).trim() : null) : atual.observacoes;
+  const execNorm = executado !== undefined ? (executado ? 1 : 0) : atual.executado;
+
+  db.prepare(`
+    UPDATE agendamento_adesoes
+    SET unidade = ?, bloco = ?, nome_morador = ?, telefone = ?, tipo_unidade = ?, valor = ?, metodo = ?, observacoes = ?, executado = ?
+    WHERE id = ? AND agendamento_id = ?
+  `).run(unidadeNorm, blocoNorm, nomeNorm, telNorm, tipoNorm, valorNorm, metodoNorm, obsNorm, execNorm, adesaoId, id);
+
+  res.json({
+    ok: true,
+    adesao: db.prepare('SELECT * FROM agendamento_adesoes WHERE id = ?').get(adesaoId)
+  });
+});
+
 // Remover adesão de uma unidade
 router.delete('/:id/adesoes/:adesaoId', (req, res) => {
   const id = Number(req.params.id);
@@ -503,7 +691,7 @@ router.patch('/:id/adesoes/:adesaoId/executado', (req, res) => {
   res.json({ ok: true, executado: novoStatus });
 });
 
-// Editar (data/empresa/observação/preços) ou cancelar um agendamento ainda 'agendado'.
+// Editar (data/empresa/observação/preços/status) ou cancelar um agendamento (inclusive após execução).
 router.put('/:id', (req, res) => {
   const id = Number(req.params.id);
   const ag = db.prepare('SELECT * FROM agendamentos WHERE id = ?').get(id);
@@ -511,9 +699,7 @@ router.put('/:id', (req, res) => {
   if (!podeAcessarCondominio(req.usuario, ag.condominio_id)) {
     return res.status(403).json({ erro: 'Você não tem acesso a este condomínio' });
   }
-  if (ag.status !== 'agendado') {
-    return res.status(400).json({ erro: 'Só é possível alterar agendamentos pendentes' });
-  }
+
   const {
     data_agendada,
     periodo,
@@ -530,7 +716,8 @@ router.put('/:id', (req, res) => {
   } else {
     const empresaNorm = empresa === undefined ? ag.empresa : (empresa ? String(empresa).trim().toUpperCase() : null);
     const tiposJson = tipos_unidades !== undefined ? (typeof tipos_unidades === 'string' ? tipos_unidades : JSON.stringify(tipos_unidades)) : ag.tipos_unidades;
-    const valorComum = valor_area_comum !== undefined ? (valor_area_comum ? Number(valor_area_comum) : null) : ag.valor_area_comum;
+    const valorComum = valor_area_comum !== undefined ? (valor_area_comum !== '' && valor_area_comum !== null ? Number(valor_area_comum) : null) : ag.valor_area_comum;
+    const novoStatus = status !== undefined ? status : ag.status;
 
     db.prepare(`
       UPDATE agendamentos 
@@ -540,7 +727,8 @@ router.put('/:id', (req, res) => {
           observacao = ?,
           valor_area_comum = ?,
           tipos_unidades = ?,
-          orientacoes = ?
+          orientacoes = ?,
+          status = ?
       WHERE id = ?
     `).run(
       data_agendada ?? ag.data_agendada,
@@ -550,6 +738,7 @@ router.put('/:id', (req, res) => {
       valorComum,
       tiposJson,
       orientacoes === undefined ? ag.orientacoes : orientacoes,
+      novoStatus,
       id
     );
   }
